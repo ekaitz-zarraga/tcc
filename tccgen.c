@@ -3137,8 +3137,9 @@ static void parse_attribute(AttributeDef *ad)
         case TOK_ALIAS2:
             skip('(');
 	    parse_mult_str(&astr, "alias(\"target\")");
+            TokenSym *tk = tok_alloc((char*)astr.data, astr.size-1);
             ad->alias_target = /* save string as token, for later */
-              tok_alloc((char*)astr.data, astr.size-1)->tok;
+              tk->tok;
             skip(')');
 	    cstr_free(&astr);
             break;
@@ -3979,7 +3980,8 @@ static int asm_label_instr(void)
 #ifdef ASM_DEBUG
     printf("asm_alias: \"%s\"\n", (char *)astr.data);
 #endif
-    v = tok_alloc(astr.data, astr.size - 1)->tok;
+    TokenSym *tk = tok_alloc(astr.data, astr.size - 1);
+    v = tk->tok;
     cstr_free(&astr);
     return v;
 }
@@ -5467,10 +5469,12 @@ static void gfunc_return(CType *func_type)
 }
 #endif
 
-static int case_cmp(const void *pa, const void *pb)
+static int case_cmp(const void *ppa, const void *ppb)
 {
-    int64_t a = (*(struct case_t**) pa)->v1;
-    int64_t b = (*(struct case_t**) pb)->v1;
+    struct case_t *pa = *(struct case_t**)ppa;
+    struct case_t *pb = *(struct case_t**)ppb;
+    int64_t a = pa->v1;
+    int64_t b = pb->v1;
     return a < b ? -1 : a > b;
 }
 

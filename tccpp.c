@@ -1595,7 +1595,8 @@ static void pragma_parse(TCCState *s1)
             goto pragma_err;
         if (next(), tok != TOK_STR)
             goto pragma_err;
-        v = tok_alloc(tokc.str.data, tokc.str.size - 1)->tok;
+        TokenSym *tk = tok_alloc(tokc.str.data, tokc.str.size - 1);
+        v = tk->tok;
         if (next(), tok != ')')
             goto pragma_err;
         if (t == TOK_push_macro) {
@@ -1616,8 +1617,8 @@ static void pragma_parse(TCCState *s1)
         pp_debug_tok = t, pp_debug_symv = v;
 
     } else if (tok == TOK_once) {
-        search_cached_include(s1, file->filename, 1)->once = pp_once;
-
+        CachedInclude *p = search_cached_include(s1, file->filename, 1);
+        p->once = pp_once;
     } else if (s1->ppfp) {
         /* tcc -E: keep pragmas below unchanged */
         unget_tok(' ');
@@ -2547,8 +2548,8 @@ static inline void next_nomacro1(void)
 #ifdef INC_DEBUG
                     printf("#endif %s\n", get_tok_str(file->ifndef_macro_saved, NULL));
 #endif
-                    search_cached_include(s1, file->filename, 1)
-                        ->ifndef_macro = file->ifndef_macro_saved;
+                    CachedInclude *tmp = search_cached_include(s1, file->filename, 1);
+                    tmp->ifndef_macro = file->ifndef_macro_saved;
                     tok_flags &= ~TOK_FLAG_ENDIF;
                 }
 

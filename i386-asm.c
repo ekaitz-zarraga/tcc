@@ -1198,7 +1198,8 @@ ST_FUNC int asm_parse_regvar (int t)
     s = table_ident[t - TOK_IDENT]->str;
     if (s[0] != '%')
         return -1;
-    t = tok_alloc(s+1, strlen(s)-1)->tok;
+    TokenSym *tok = tok_alloc(s+1, strlen(s)-1);
+    t = tok->tok;
     unget_tok(t);
     unget_tok('%');
     parse_operand(tcc_state, &op);
@@ -1479,7 +1480,8 @@ ST_FUNC void subst_asm_operand(CString *add_str,
 		   in the C symbol table when later looking up
 		   this name.  So enter them now into the asm label
 		   list when we still know the symbol.  */
-		get_asm_sym(tok_alloc(name, strlen(name))->tok, sv->sym);
+		TokenSym *tok = tok_alloc(name, strlen(name));
+		get_asm_sym(tok->tok, sv->sym);
 	    }
             cstr_cat(add_str, name, -1);
             if ((uint32_t)sv->c.i == 0)

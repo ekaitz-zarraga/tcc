@@ -564,14 +564,17 @@ ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
        So they will be mostly in order and there aren't many of them.
        Secondly we need a stable sort (which qsort isn't).  We use
        a simple insertion sort.  */
-    for (a = oldrelocoffset + sizeof(*r); a < sr->data_offset; a += sizeof(*r)) {
-	ssize_t i = a - sizeof(*r);
-	addr = ((ElfW_Rel*)(sr->data + a))->r_offset;
-	for (; i >= (ssize_t)oldrelocoffset &&
-	       ((ElfW_Rel*)(sr->data + i))->r_offset > addr; i -= sizeof(*r)) {
-	    ElfW_Rel tmp = *(ElfW_Rel*)(sr->data + a);
-	    *(ElfW_Rel*)(sr->data + a) = *(ElfW_Rel*)(sr->data + i);
-	    *(ElfW_Rel*)(sr->data + i) = tmp;
+    for (a = oldrelocoffset + sizeof(ElfW_Rel); a < sr->data_offset; a += sizeof(ElfW_Rel)) {
+	ssize_t i = a - sizeof(ElfW_Rel);
+	ElfW_Rel* ea = (ElfW_Rel*)(sr->data + a);
+	ElfW_Rel* ei = (ElfW_Rel*)(sr->data + i);
+	addr = ea->r_offset;
+	for (; i >= (ssize_t)oldrelocoffset && ei->r_offset > addr;
+	     i -= sizeof(ElfW_Rel)) {
+	    ei = (ElfW_Rel*)(sr->data + i);
+	    ElfW_Rel tmp = *ea;
+	    *ea = *ei;
+	    *ei = tmp;
 	}
     }
 
@@ -1011,7 +1014,8 @@ ST_FUNC void build_got_entries(TCCState *s1)
 		       of function type.  */
 		    if (s1->dynsym) {
 			/* dynsym isn't set for -run :-/  */
-			dynindex = get_sym_attr(s1, sym_index, 0)->dyn_index;
+                        struct sym_attr *attr = get_sym_attr(s1, sym_index, 0);
+                        dynindex = attr->dyn_index;
 			esym = (ElfW(Sym) *)s1->dynsym->data + dynindex;
 			if (dynindex
 			    && (ELFW(ST_TYPE)(esym->st_info) == STT_FUNC
@@ -1352,7 +1356,8 @@ static void bind_exe_dynsyms(TCCState *s1)
 				    ELFW(ST_INFO)(STB_GLOBAL,STT_FUNC), 0, 0,
 				    name);
 		    int index = sym - (ElfW(Sym) *) symtab_section->data;
-		    get_sym_attr(s1, index, 1)->dyn_index = dynindex;
+		    struct sym_attr* attr = get_sym_attr(s1, index, 1);
+		    attr->dyn_index = dynindex;
                 } else if (type == STT_OBJECT) {
                     unsigned long offset;
                     ElfW(Sym) *dynsym;
@@ -1447,7 +1452,8 @@ static void export_global_syms(TCCState *s1)
 	    dynindex = put_elf_sym(s1->dynsym, sym->st_value, sym->st_size,
 				   sym->st_info, 0, sym->st_shndx, name);
 	    index = sym - (ElfW(Sym) *) symtab_section->data;
-            get_sym_attr(s1, index, 1)->dyn_index = dynindex;
+            struct sym_attr *attr = get_sym_attr(s1, index, 1);
+            attr->dyn_index = dynindex;
         }
     }
 }
