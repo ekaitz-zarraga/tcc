@@ -387,9 +387,15 @@ typedef struct CType {
 
 /* constant value */
 typedef union CValue {
+#if HAVE_FLOAT
     long double ld;
     double d;
     float f;
+#else
+    int ld;
+    int d;
+    int f;
+#endif
     uint64_t i;
     struct {
         int size;

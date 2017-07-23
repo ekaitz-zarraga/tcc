@@ -2169,7 +2169,9 @@ static void parse_number(const char *p)
     int b, t, shift, frac_bits, s, exp_val, ch;
     char *q;
     unsigned int bn[BN_SIZE];
+#if HAVE_FLOAT
     double d;
+#endif // HAVE_FLOAT
 
     /* number */
     q = token_buf;
@@ -2280,18 +2282,22 @@ static void parse_number(const char *p)
             }
             exp_val = exp_val * s;
             
+            t = toup(ch);
+#if HAVE_FLOAT
             /* now we can generate the number */
             /* XXX: should patch directly float number */
             d = (double)bn[1] * 4294967296.0 + (double)bn[0];
             d = ldexp(d, exp_val - frac_bits);
-            t = toup(ch);
             if (t == 'F') {
                 ch = *p++;
                 tok = TOK_CFLOAT;
                 /* float : should handle overflow */
                 tokc.f = (float)d;
-            } else if (t == 'L') {
+            } else
+#endif // HAVE_FLOAT
+                if (t == 'L') {
                 ch = *p++;
+#if HAVE_FLOAT
 #ifdef TCC_TARGET_PE
                 tok = TOK_CDOUBLE;
                 tokc.d = d;
@@ -2300,10 +2306,14 @@ static void parse_number(const char *p)
                 /* XXX: not large enough */
                 tokc.ld = (long double)d;
 #endif
-            } else {
+#endif // HAVE_FLOAT
+            }
+#if HAVE_FLOAT
+            else {
                 tok = TOK_CDOUBLE;
                 tokc.d = d;
             }
+#endif // HAVE_FLOAT
         } else {
             /* decimal floats */
             if (ch == '.') {
@@ -2342,12 +2352,16 @@ static void parse_number(const char *p)
             *q = '\0';
             t = toup(ch);
             errno = 0;
+#if HAVE_FLOAT
             if (t == 'F') {
                 ch = *p++;
                 tok = TOK_CFLOAT;
                 tokc.f = strtof(token_buf, NULL);
-            } else if (t == 'L') {
+            } else
+#endif //HAVE_FLOAT
+            if (t == 'L') {
                 ch = *p++;
+#if HAVE_FLOAT
 #ifdef TCC_TARGET_PE
                 tok = TOK_CDOUBLE;
                 tokc.d = strtod(token_buf, NULL);
@@ -2355,10 +2369,14 @@ static void parse_number(const char *p)
                 tok = TOK_CLDOUBLE;
                 tokc.ld = strtold(token_buf, NULL);
 #endif
-            } else {
+#endif //HAVE_FLOAT
+            }
+#if HAVE_FLOAT
+            else {
                 tok = TOK_CDOUBLE;
                 tokc.d = strtod(token_buf, NULL);
             }
+#endif // HAVE_FLOAT
         }
     } else {
         unsigned long long n, n1;

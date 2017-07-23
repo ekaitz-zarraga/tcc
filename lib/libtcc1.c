@@ -47,6 +47,7 @@ typedef union
   DWtype ll;
 } DWunion;
 
+#if HAVE_FLOAT
 typedef long double XFtype;
 #define WORD_SIZE (sizeof (Wtype) * BITS_PER_UNIT)
 #define HIGH_WORD_COEFF (((UDWtype) 1) << WORD_SIZE)
@@ -620,3 +621,4 @@ long long __fixxfdi (long double a1)
     return s ? ret : -ret;
 }
 #endif /* !ARM */
+#endif // HAVE_FLOAT

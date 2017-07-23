@@ -100,6 +100,7 @@ ST_INLN int is_float(int t)
     return bt == VT_LDOUBLE || bt == VT_DOUBLE || bt == VT_FLOAT || bt == VT_QFLOAT;
 }
 
+#if HAVE_FLOAT
 /* we use our own 'finite' function to avoid potential problems with
    non standard math libs */
 /* XXX: endianness dependent */
@@ -109,6 +110,7 @@ ST_FUNC int ieee_finite(double d)
     memcpy(p, &d, sizeof(double));
     return ((unsigned)((p[1] | 0x800fffff) + 1)) >> 31;
 }
+#endif // HAVE_FLOAT
 
 ST_FUNC void test_lvalue(void)
 {
@@ -118,8 +120,10 @@ ST_FUNC void test_lvalue(void)
 
 ST_FUNC void check_vstack(void)
 {
+#if HAVE_FLOAT
     if (pvtop != vtop)
         tcc_error("internal compiler error: vstack leak (%d)", vtop - pvtop);
+#endif
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1811,6 +1815,7 @@ static void gen_opic(int op)
     }
 }
 
+#if HAVE_FLOAT
 /* generate a floating point operation with constant propagation */
 static void gen_opif(int op)
 {
@@ -1870,6 +1875,7 @@ static void gen_opif(int op)
         gen_opf(op);
     }
 }
+#endif //HAVE_FLOAT
 
 static int pointed_size(CType *type)
 {
@@ -2134,9 +2140,11 @@ redo:
         if (op == TOK_SHR || op == TOK_SAR || op == TOK_SHL)
             type1.t = VT_INT;
         gen_cast(&type1);
+#if HAVE_FLOAT
         if (is_float(t))
             gen_opif(op);
         else
+#endif
             gen_opic(op);
         if (op >= TOK_ULT && op <= TOK_GT) {
             /* relational op: the result is an int */
@@ -2276,19 +2284,25 @@ static void gen_cast(CType *type)
                 if ((sbt & VT_BTYPE) == VT_LLONG) {
                     if ((sbt & VT_UNSIGNED) || !(vtop->c.i >> 63))
                         vtop->c.ld = vtop->c.i;
+#if HAVE_FLOAT
                     else
                         vtop->c.ld = -(long double)-vtop->c.i;
+#endif
                 } else if(!sf) {
                     if ((sbt & VT_UNSIGNED) || !(vtop->c.i >> 31))
                         vtop->c.ld = (uint32_t)vtop->c.i;
+#if HAVE_FLOAT
                     else
                         vtop->c.ld = -(long double)-(uint32_t)vtop->c.i;
+#endif
                 }
 
+#if HAVE_FLOAT
                 if (dbt == VT_FLOAT)
                     vtop->c.f = (float)vtop->c.ld;
                 else if (dbt == VT_DOUBLE)
                     vtop->c.d = (double)vtop->c.ld;
+#endif
             } else if (sf && dbt == (VT_LLONG|VT_UNSIGNED)) {
                 vtop->c.i = vtop->c.ld;
             } else if (sf && dbt == VT_BOOL) {
@@ -4651,6 +4665,7 @@ ST_FUNC void unary(void)
         next();
         unary();
         t = vtop->type.t & VT_BTYPE;
+#if HAVE_FLOAT
 	if (is_float(t)) {
             /* In IEEE negate(x) isn't subtract(0,x), but rather
 	       subtract(-0, x).  */
@@ -4662,6 +4677,7 @@ ST_FUNC void unary(void)
 	    else
 	        vtop->c.ld = -1.0 * 0.0;
 	} else
+#endif // HAVE_FLOAT
 	    vpushi(0);
 	vswap();
 	gen_op('-');
@@ -6176,6 +6192,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 	    case VT_SHORT:
 		*(short *)ptr |= (vtop->c.i & bit_mask) << bit_pos;
 		break;
+#if HAVE_FLOAT
 	    case VT_FLOAT:
 		*(float*)ptr = vtop->c.f;
 		break;
@@ -6199,6 +6216,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 		else
                     tcc_error("can't cross compile long double constants");
 		break;
+#endif // HAVE_FLOAT
 #if PTR_SIZE != 8
 	    case VT_LLONG:
 		*(long long *)ptr |= (vtop->c.i & bit_mask) << bit_pos;
