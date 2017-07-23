@@ -416,6 +416,7 @@ typedef struct SValue {
 } SValue;
 
 struct Attribute {
+#if HAVE_BITFIELD
     unsigned
         func_call     : 3, /* calling convention (0..5), see below */
         aligned       : 5, /* alignment as log2+1 (0 == unspecified) */
@@ -429,6 +430,22 @@ struct Attribute {
         visibility    : 2,
 	unsigned_enum : 1,
         fill          : 7; // 7 bits left to fit well in union below
+#else // !HAVE_BITFIELD
+  struct {
+    unsigned func_call;
+    unsigned aligned;
+    unsigned packed;
+    unsigned func_export;
+    unsigned func_import;
+    unsigned func_args;
+    unsigned func_body;
+    unsigned mode;
+    unsigned weak;
+    unsigned visibility;
+    unsigned unsigned_enum;
+    unsigned fill;
+  };
+#endif // !HAVE_BITFIELD
 };
 
 /* GNUC attribute definition */
