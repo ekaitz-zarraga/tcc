@@ -3048,7 +3048,7 @@ static int *macro_arg_subst(Sym **nested_list, const int *macro_str, Sym *args)
     return str.str;
 }
 
-static char const ab_month_name[12][4] =
+static char const *ab_month_name[12] =
 {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
