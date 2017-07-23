@@ -400,6 +400,12 @@ typedef struct CType {
     struct Sym *ref;
 } CType;
 
+
+struct CValue_str {
+    int size;
+    const void *data;
+};
+
 /* constant value */
 typedef union CValue {
 #if HAVE_FLOAT
@@ -412,10 +418,7 @@ typedef union CValue {
     int f;
 #endif
     uint64_t i;
-    struct {
-        int size;
-        const void *data;
-    } str;
+    struct CValue_str str;
     int tab[LDOUBLE_SIZE/4];
 } CValue;
 
@@ -659,6 +662,13 @@ struct sym_attr {
 #endif
 };
 
+enum TCCState_pflag {
+  LINE_MACRO_OUTPUT_FORMAT_GCC,
+  LINE_MACRO_OUTPUT_FORMAT_NONE,
+  LINE_MACRO_OUTPUT_FORMAT_STD,
+  LINE_MACRO_OUTPUT_FORMAT_P10 = 11
+};
+
 struct TCCState {
 
     int verbose; /* if true, display some information during compilation */
@@ -752,12 +762,7 @@ struct TCCState {
 
     /* output file for preprocessing (-E) */
     FILE *ppfp;
-    enum {
-	LINE_MACRO_OUTPUT_FORMAT_GCC,
-	LINE_MACRO_OUTPUT_FORMAT_NONE,
-	LINE_MACRO_OUTPUT_FORMAT_STD,
-    LINE_MACRO_OUTPUT_FORMAT_P10 = 11
-    } Pflag; /* -P switch */
+    enum TCCState_pflag Pflag;
     char dflag; /* -dX value */
 
     /* for -MD/-MF: collected dependencies for this compilation */
