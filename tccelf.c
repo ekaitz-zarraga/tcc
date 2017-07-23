@@ -839,9 +839,12 @@ static int prepare_dynamic_rel(TCCState *s1, Section *sr)
 #elif defined(TCC_TARGET_X86_64)
         case R_X86_64_PC32:
 #endif
-            if (get_sym_attr(s1, sym_index, 0)->dyn_index)
+          {
+            struct sym_attr* tmp = get_sym_attr(s1, sym_index, 0);
+            if (tmp->dyn_index)
                 count++;
             break;
+          }
         default:
             break;
         }
@@ -1851,17 +1854,17 @@ static void tcc_output_elf(TCCState *s1, FILE *f, int phnum, ElfW(Phdr) *phdr,
 #endif
 #endif
     switch(file_type) {
-    default:
-    case TCC_OUTPUT_EXE:
-        ehdr.e_type = ET_EXEC;
-        ehdr.e_entry = get_elf_sym_addr(s1, "_start", 1);
-        break;
     case TCC_OUTPUT_DLL:
         ehdr.e_type = ET_DYN;
         ehdr.e_entry = text_section->sh_addr; /* XXX: is it correct ? */
         break;
     case TCC_OUTPUT_OBJ:
         ehdr.e_type = ET_REL;
+        break;
+    case TCC_OUTPUT_EXE:
+    default:
+        ehdr.e_type = ET_EXEC;
+        ehdr.e_entry = get_elf_sym_addr(s1, "_start", 1);
         break;
     }
     ehdr.e_machine = EM_TCC_TARGET;
@@ -2112,10 +2115,6 @@ static int elf_output_file(TCCState *s1, const char *filename)
 
     /* compute number of program headers */
     switch(file_type) {
-    default:
-    case TCC_OUTPUT_OBJ:
-        phnum = 0;
-        break;
     case TCC_OUTPUT_EXE:
         if (!s1->static_link)
             phnum = 4 + HAVE_PHDR;
@@ -2124,6 +2123,10 @@ static int elf_output_file(TCCState *s1, const char *filename)
         break;
     case TCC_OUTPUT_DLL:
         phnum = 3;
+        break;
+    case TCC_OUTPUT_OBJ:
+    default:
+        phnum = 0;
         break;
     }
 

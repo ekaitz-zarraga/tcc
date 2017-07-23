@@ -217,8 +217,8 @@ static void asm_expr_prod(TCCState *s1, ExprValue *pe)
         case TOK_SHL:
             pe->v <<= e2.v;
             break;
-        default:
         case TOK_SAR:
+        default:
             pe->v >>= e2.v;
             break;
         }
@@ -246,8 +246,8 @@ static void asm_expr_logic(TCCState *s1, ExprValue *pe)
         case '|':  
             pe->v |= e2.v;
             break;
-        default:
         case '^':
+        default:
             pe->v ^= e2.v;
             break;
         }
@@ -622,8 +622,8 @@ static void asm_parse_directive(TCCState *s1, int global)
                     g(repeat_buf[j]);
                 }
             }
+            break;
         }
-        break;
     case TOK_ASMDIR_rept:
         {
             int repeat;
@@ -669,8 +669,8 @@ static void asm_parse_directive(TCCState *s1, int global)
             v = 0;
             size = n - ind;
             goto zero_pad;
+            break;
         }
-        break;
     case TOK_ASMDIR_set:
 	next();
 	tok1 = tok;
@@ -724,8 +724,8 @@ static void asm_parse_directive(TCCState *s1, int global)
                     break;
                 }
             }
+            break;
 	}
-	break;
     case TOK_ASMDIR_text:
     case TOK_ASMDIR_data:
     case TOK_ASMDIR_bss:
@@ -743,8 +743,8 @@ static void asm_parse_directive(TCCState *s1, int global)
             else
                 sprintf(sname, "%s", get_tok_str(tok1, NULL));
             use_section(s1, sname);
+            break;
 	}
-	break;
     case TOK_ASMDIR_file:
         {
             char filename[512];
@@ -761,8 +761,8 @@ static void asm_parse_directive(TCCState *s1, int global)
                 tcc_warning("ignoring .file %s", filename);
 
             next();
+            break;
         }
-        break;
     case TOK_ASMDIR_ident:
         {
             char ident[256];
@@ -779,8 +779,8 @@ static void asm_parse_directive(TCCState *s1, int global)
                 tcc_warning("ignoring .ident %s", ident);
 
             next();
+            break;
         }
-        break;
     case TOK_ASMDIR_size:
         { 
             Sym *sym;
@@ -800,8 +800,8 @@ static void asm_parse_directive(TCCState *s1, int global)
             while (tok != TOK_LINEFEED && tok != ';' && tok != CH_EOF) {
                 next();
             }
+            break;
         }
-        break;
     case TOK_ASMDIR_type:
         { 
             Sym *sym;
@@ -827,8 +827,8 @@ static void asm_parse_directive(TCCState *s1, int global)
                     get_tok_str(sym->v, NULL), sym->type.t, newtype);
 
             next();
+            break;
         }
-        break;
     case TOK_ASMDIR_pushsection:
     case TOK_ASMDIR_section:
         {
@@ -869,8 +869,8 @@ static void asm_parse_directive(TCCState *s1, int global)
 	       sets alignment to PTR_SIZE.  The assembler behaves different. */
 	    if (old_nb_section != s1->nb_sections)
 	        cur_text_section->sh_addralign = 1;
+            break;
         }
-        break;
     case TOK_ASMDIR_previous:
         { 
             Section *sec;
@@ -880,8 +880,8 @@ static void asm_parse_directive(TCCState *s1, int global)
             sec = cur_text_section;
             use_section1(s1, last_text_section);
             last_text_section = sec;
+            break;
         }
-        break;
     case TOK_ASMDIR_popsection:
 	next();
 	pop_section(s1);
@@ -891,14 +891,14 @@ static void asm_parse_directive(TCCState *s1, int global)
         {
             next();
             s1->seg_size = 16;
+            break;
         }
-        break;
     case TOK_ASMDIR_code32:
         {
             next();
             s1->seg_size = 32;
+            break;
         }
-        break;
 #endif
 #ifdef TCC_TARGET_X86_64
     /* added for compatibility with GAS */

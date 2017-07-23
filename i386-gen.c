@@ -962,10 +962,6 @@ ST_FUNC void gen_opf(int op)
         }
         
         switch(op) {
-        default:
-        case '+':
-            a = 0;
-            break;
         case '-':
             a = 4;
             if (swapped)
@@ -978,6 +974,10 @@ ST_FUNC void gen_opf(int op)
             a = 6;
             if (swapped)
                 a++;
+            break;
+        case '+':
+        default:
+            a = 0;
             break;
         }
         ft = vtop->type.t;

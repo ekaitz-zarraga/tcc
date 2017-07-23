@@ -947,14 +947,12 @@ redo_start:
         /* skip strings */
         case '\"':
         case '\'':
-            if (in_warn_or_error)
-                goto _default;
+            if (in_warn_or_error) {p++; break;}
             p = parse_pp_string(p, c, NULL);
             break;
         /* skip comments */
         case '/':
-            if (in_warn_or_error)
-                goto _default;
+            if (in_warn_or_error) {p++; break;}
             file->buf_ptr = p;
             ch = *p;
             minp();
@@ -987,7 +985,6 @@ redo_start:
             } else if (parse_flags & PARSE_FLAG_ASM_FILE)
                 p = parse_line_comment(p - 1);
             break;
-_default:
         default:
             p++;
             break;
@@ -1172,8 +1169,8 @@ static void tok_str_add2(TokenString *s, int t, CValue *cv)
             str[len] = cv->str.size;
             memcpy(&str[len + 1], cv->str.data, cv->str.size);
             len += nb_words;
+            break;
         }
-        break;
     case TOK_CDOUBLE:
     case TOK_CLLONG:
     case TOK_CULLONG:
@@ -1188,16 +1185,17 @@ static void tok_str_add2(TokenString *s, int t, CValue *cv)
         str[len++] = cv->tab[0];
         str[len++] = cv->tab[1];
         str[len++] = cv->tab[2];
+        break;
 #elif LDOUBLE_SIZE == 16
     case TOK_CLDOUBLE:
         str[len++] = cv->tab[0];
         str[len++] = cv->tab[1];
         str[len++] = cv->tab[2];
         str[len++] = cv->tab[3];
+        break;
 #elif LDOUBLE_SIZE != 8
 #error add long double size support
 #endif
-        break;
     default:
         break;
     }
@@ -1969,6 +1967,7 @@ include_done:
     case TOK_LINEFEED:
         goto the_end;
     default:
+      {
         /* ignore gas line comment in an 'S' file. */
         if (saved_parse_flags & PARSE_FLAG_ASM_FILE)
             goto ignore;
@@ -1979,6 +1978,7 @@ include_done:
     ignore:
         file->buf_ptr = parse_line_comment(file->buf_ptr - 1);
         goto the_end;
+      }
     }
     /* ignore other preprocess commands or #! for C scripts */
     while (tok != TOK_LINEFEED)
@@ -2474,6 +2474,7 @@ static void parse_number(const char *p)
 
 #define PARSE2(c1, tok1, c2, tok2)              \
     case c1:                                    \
+      {                                         \
         PEEKC(c, p);                            \
         if (c == c2) {                          \
             p++;                                \
@@ -2481,7 +2482,8 @@ static void parse_number(const char *p)
         } else {                                \
             tok = tok1;                         \
         }                                       \
-        break;
+        break;                                  \
+     }
 
 /* return next token without macro substitution */
 static inline void next_nomacro1(void)
@@ -2570,6 +2572,7 @@ maybe_newline:
         goto keep_tok_flags;
 
     case '#':
+      {
         /* XXX: simplify */
         PEEKC(c, p);
         if ((tok_flags & TOK_FLAG_BOL) && 
@@ -2592,7 +2595,7 @@ maybe_newline:
             }
         }
         break;
-    
+      }
     /* dollar is allowed to start identifiers when not parsing asm */
     case '$':
         if (!(isidnum_table[c - CH_EOF] & IS_ID)
@@ -2702,8 +2705,8 @@ maybe_newline:
         tokc.str.data = tokcstr.data;
         tok = TOK_PPNUM;
         break;
-
     case '.':
+      {
         /* special dot handling because it can also start a number */
         PEEKC(c, p);
         if (isnum(c)) {
@@ -2726,6 +2729,7 @@ maybe_newline:
             tok = '.';
         }
         break;
+      }
     case '\'':
     case '\"':
         is_long = 0;
@@ -2743,6 +2747,7 @@ maybe_newline:
         break;
 
     case '<':
+      {
         PEEKC(c, p);
         if (c == '=') {
             p++;
@@ -2759,7 +2764,9 @@ maybe_newline:
             tok = TOK_LT;
         }
         break;
+      }
     case '>':
+      {
         PEEKC(c, p);
         if (c == '=') {
             p++;
@@ -2776,8 +2783,9 @@ maybe_newline:
             tok = TOK_GT;
         }
         break;
-        
+      }
     case '&':
+      {
         PEEKC(c, p);
         if (c == '&') {
             p++;
@@ -2789,8 +2797,9 @@ maybe_newline:
             tok = '&';
         }
         break;
-        
+      }
     case '|':
+      {
         PEEKC(c, p);
         if (c == '|') {
             p++;
@@ -2802,8 +2811,9 @@ maybe_newline:
             tok = '|';
         }
         break;
-
+      }
     case '+':
+      {
         PEEKC(c, p);
         if (c == '+') {
             p++;
@@ -2815,8 +2825,9 @@ maybe_newline:
             tok = '+';
         }
         break;
-        
+      }
     case '-':
+      {
         PEEKC(c, p);
         if (c == '-') {
             p++;
@@ -2831,7 +2842,7 @@ maybe_newline:
             tok = '-';
         }
         break;
-
+      }
     PARSE2('!', '!', '=', TOK_NE)
     PARSE2('=', '=', '=', TOK_EQ)
     PARSE2('*', '*', '=', TOK_A_MUL)
@@ -2840,6 +2851,7 @@ maybe_newline:
         
         /* comments or operator */
     case '/':
+      {
         PEEKC(c, p);
         if (c == '*') {
             p = parse_comment(p);
@@ -2857,7 +2869,7 @@ maybe_newline:
             tok = '/';
         }
         break;
-        
+      }
         /* simple tokens */
     case '(':
     case ')':

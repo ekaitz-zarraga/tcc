@@ -4391,8 +4391,8 @@ ST_FUNC void unary(void)
             ptr = section_ptr_add(data_section, len);
             memcpy(ptr, funcname, len);
             next();
+            break;
         }
-        break;
     case TOK_LSTR:
 #ifdef TCC_TARGET_PE
         t = VT_SHORT | VT_UNSIGNED;
@@ -4570,8 +4570,8 @@ ST_FUNC void unary(void)
 		nocode_wanted--;
 	    }
 	    skip(')');
+            break;
 	}
-        break;
     case TOK_builtin_constant_p:
 	parse_builtin_params(1, "e");
 	n = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
@@ -4609,8 +4609,8 @@ ST_FUNC void unary(void)
                 mk_pointer(&vtop->type);
                 indir();
             }
+            break;
         }
-        break;
 #ifdef TCC_TARGET_X86_64
 #ifdef TCC_TARGET_PE
     case TOK_builtin_va_start:
