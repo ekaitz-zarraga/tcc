@@ -2006,8 +2006,7 @@ PUB_FUNC void tcc_print_stats(TCCState *s, unsigned total_time)
         total_time = 1;
     if (total_bytes < 1)
         total_bytes = 1;
-    fprintf(stderr, "* %d idents, %d lines, %d bytes\n"
-                    "* %0.3f s, %u lines/s, %0.1f MB/s\n",
+    fprintf(stderr, "* %d idents, %d lines, %d bytes\n* %0.3f s, %u lines/s, %0.1f MB/s\n",
            tok_ident - TOK_IDENT, total_lines, total_bytes,
            (double)total_time/1000,
            (unsigned)total_lines*1000/total_time,

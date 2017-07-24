@@ -494,13 +494,16 @@ ST_FUNC void tcc_tool_cross(TCCState *s, char **argv, int target)
     int prefix = tcc_basename(a0) - a0;
 
     snprintf(program, sizeof program,
-        "%.*s%s"
+#if !defined (TCC_TARGET_PE) && !defined (_WIN32)
+        "%.*s%s-tcc"
+#else
 #ifdef TCC_TARGET_PE
         "-win32"
 #endif
         "-tcc"
 #ifdef _WIN32
         ".exe"
+#endif
 #endif
         , prefix, a0, target == 64 ? "x86_64" : "i386");
 

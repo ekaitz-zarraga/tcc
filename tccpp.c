@@ -3303,8 +3303,8 @@ static int paste_tokens(int t1, CValue *v1, int t2, CValue *v2)
             break;
         if (is_space(tok))
             continue;
-        tcc_warning("pasting \"%.*s\" and \"%s\" does not give a valid"
-            " preprocessing token", n, cstr.data, (char*)cstr.data + n);
+        tcc_warning("pasting \"%.*s\" and \"%s\" does not give a valid preprocessing token",
+                    n, cstr.data, (char*)cstr.data + n);
         ret = 0;
         break;
     }
