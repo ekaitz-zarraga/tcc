@@ -1062,7 +1062,7 @@ ST_INLN void tok_str_new(TokenString *s)
 
 ST_FUNC TokenString *tok_str_alloc(void)
 {
-    TokenString *str = tal_realloc(tokstr_alloc, 0, sizeof *str);
+    TokenString *str = tal_realloc(tokstr_alloc, 0, sizeof (TokenString));
     tok_str_new(str);
     return str;
 }

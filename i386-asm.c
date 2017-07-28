@@ -1612,7 +1612,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
     }
     if (!is_output) {
         /* generate reg save code */
-        for(i = 0; i < sizeof(reg_saved)/sizeof(reg_saved[0]); i++) {
+        for(i = 0; i < sizeof(reg_saved)/sizeof(uint8_t); i++) {
             reg = reg_saved[i];
             if (regs_allocated[reg]) {
 		if (reg >= 8)
@@ -1675,7 +1675,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
             }
         }
         /* generate reg restore code */
-        for(i = sizeof(reg_saved)/sizeof(reg_saved[0]) - 1; i >= 0; i--) {
+        for(i = sizeof(reg_saved)/sizeof(uint8_t) - 1; i >= 0; i--) {
             reg = reg_saved[i];
             if (regs_allocated[reg]) {
 		if (reg >= 8)

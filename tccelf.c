@@ -558,7 +558,7 @@ ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
     ssize_t a;
     ElfW(Addr) addr;
 
-    if (oldrelocoffset + sizeof(*r) >= sr->data_offset)
+    if (oldrelocoffset + sizeof(ElfW_Rel) >= sr->data_offset)
       return;
     /* The relocs we're dealing with are the result of initializer parsing.
        So they will be mostly in order and there aren't many of them.
@@ -585,7 +585,7 @@ ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
 	  dest++;
 	*dest = *r;
     }
-    sr->data_offset = (unsigned char*)dest - sr->data + sizeof(*r);
+    sr->data_offset = (unsigned char*)dest - sr->data + sizeof(ElfW_Rel);
 }
 
 /* put stab debug information */
@@ -638,10 +638,10 @@ ST_FUNC struct sym_attr *get_sym_attr(TCCState *s1, int index, int alloc)
         n = 1;
         while (index >= n)
             n *= 2;
-        tab = tcc_realloc(s1->sym_attrs, n * sizeof(*s1->sym_attrs));
+        tab = tcc_realloc(s1->sym_attrs, n * sizeof(struct sym_attr));
         s1->sym_attrs = tab;
         memset(s1->sym_attrs + s1->nb_sym_attrs, 0,
-               (n - s1->nb_sym_attrs) * sizeof(*s1->sym_attrs));
+               (n - s1->nb_sym_attrs) * sizeof(struct sym_attr));
         s1->nb_sym_attrs = n;
     }
     return &s1->sym_attrs[index];
@@ -1115,7 +1115,7 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
     if (0 == s1->do_bounds_check)
         return;
     /* XXX: add an object file to do that */
-    ptr = section_ptr_add(bounds_section, sizeof(*ptr));
+    ptr = section_ptr_add(bounds_section, sizeof(addr_t));
     *ptr = 0;
     set_elf_sym(symtab_section, 0, 0,
                 ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE), 0,
@@ -2231,8 +2231,8 @@ typedef struct SectionMergeInfo {
 
 ST_FUNC int tcc_object_type(int fd, ElfW(Ehdr) *h)
 {
-    int size = read(fd, h, sizeof *h);
-    if (size == sizeof *h && 0 == memcmp(h, ELFMAG, 4)) {
+    int size = read(fd, h, sizeof(ElfW(Ehdr)));
+    if (size == sizeof(ElfW(Ehdr)) && 0 == memcmp(h, ELFMAG, 4)) {
         if (h->e_type == ET_REL)
             return AFF_BINTYPE_REL;
         if (h->e_type == ET_DYN)
@@ -2483,7 +2483,7 @@ ST_FUNC int tcc_load_object_file(TCCState *s1,
         case SHT_RELX:
             /* take relocation offset information */
             offseti = sm_table[sh->sh_info].offset;
-            for_each_elem(s, (offset / sizeof(*rel)), rel, ElfW_Rel) {
+            for_each_elem(s, (offset / sizeof(ElfW_Rel)), rel, ElfW_Rel) {
                 int type;
                 unsigned sym_index;
                 /* convert symbol index */

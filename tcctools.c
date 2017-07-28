@@ -149,7 +149,7 @@ ST_FUNC int tcc_tool_ar(TCCState *s1, int argc, char **argv)
     }
 
     funcmax = 250;
-    afpos = tcc_realloc(NULL, funcmax * sizeof *afpos); // 250 func
+    afpos = tcc_realloc(NULL, funcmax * sizeof (int)); // 250 func
     memcpy(&arhdro.ar_mode, "100666", 6);
 
     // i_obj = first input object file
@@ -222,7 +222,7 @@ ST_FUNC int tcc_tool_ar(TCCState *s1, int argc, char **argv)
                     strpos += istrlen;
                     if (++funccnt >= funcmax) {
                         funcmax += 250;
-                        afpos = tcc_realloc(afpos, funcmax * sizeof *afpos); // 250 func more
+                        afpos = tcc_realloc(afpos, funcmax * sizeof (int)); // 250 func more
                     }
                     afpos[funccnt] = fpos;
                 }

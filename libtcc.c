@@ -1629,7 +1629,7 @@ static void parse_option_D(TCCState *s1, const char *optarg)
 
 static void args_parser_add_file(TCCState *s, const char* filename, int filetype)
 {
-    struct filespec *f = tcc_malloc(sizeof *f + strlen(filename));
+    struct filespec *f = tcc_malloc(sizeof (struct filespec) + strlen(filename));
     f->type = filetype;
     f->alacarte = s->alacarte_link;
     strcpy(f->name, filename);

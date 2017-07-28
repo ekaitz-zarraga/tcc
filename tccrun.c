@@ -139,7 +139,7 @@ LIBTCCAPI int tcc_run(TCCState *s1, int argc, char **argv)
 
         bound_init();
         /* mark argv area as valid */
-        bound_new_region(argv, argc*sizeof(argv[0]));
+        bound_new_region(argv, argc*sizeof(char *));
         for (i=0; i<argc; ++i)
             bound_new_region(argv[i], strlen(argv[i]) + 1);
 
