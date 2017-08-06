@@ -1464,8 +1464,13 @@ static int tcc_set_linker(TCCState *s, const char *option)
 
 typedef struct TCCOption {
     const char *name;
+#if !BOOTSTRAP
     uint16_t index;
     uint16_t flags;
+#else
+    int index;
+    int flags;
+#endif
 } TCCOption;
 
 enum {
