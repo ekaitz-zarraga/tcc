@@ -972,7 +972,9 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
         !s->nostdlib) {
         if (output_type != TCC_OUTPUT_DLL)
             tcc_add_crt(s, "crt1.o");
+#if !BOOTSTRAP
         tcc_add_crt(s, "crti.o");
+#endif
     }
 #endif
     return 0;
@@ -1146,6 +1148,10 @@ ST_FUNC int tcc_add_crt(TCCState *s, const char *filename)
     return 0;
 }
 
+#if __MESC__
+char *tcc_add_library_libs[3] = { "%s/lib%s-gcc+tcc.mlibc-o", "%s/lib%s-gcc+tcc.o", NULL };
+#endif
+
 /* the library name is the same as the argument of the '-l' option */
 LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 {
@@ -1155,9 +1161,15 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 #elif defined TCC_TARGET_MACHO
     const char *libs[] = { "%s/lib%s.dylib", "%s/lib%s.a", NULL };
     const char **pp = s->static_link ? libs + 1 : libs;
+#elif BOOTSTRAP
+    const char *libs[3] = { "%s/lib%s-gcc+tcc.mlibc-o", "%s/lib%s-gcc+tcc.o", NULL };
+    const char **pp = libs;
 #else
     const char *libs[] = { "%s/lib%s.so", "%s/lib%s.a", NULL };
     const char **pp = s->static_link ? libs + 1 : libs;
+#endif
+#if __MESC__
+    pp = tcc_add_library_libs;
 #endif
     while (*pp) {
         if (0 == tcc_add_library_internal(s, *pp,
