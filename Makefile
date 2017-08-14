@@ -188,7 +188,7 @@ $(X)%.o : %.c $(LIBTCC_INC)
 $(X)tcc.o : tcctools.c
 
 # Host Tiny C Compiler
-tcc$(EXESUF): tcc.o $(LIBTCC)
+$(PROGRAM_PREFIX)tcc$(EXESUF): tcc.o $(LIBTCC)
 	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS) $(LINK_LIBTCC)
 
 # Cross Tiny C Compilers

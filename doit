@@ -1,0 +1,62 @@
+#! /bin/sh
+set -ex
+
+export BLOOD_ELF
+export BUILD_DEBUG
+export GUILE_LOAD_PATH
+export HEX2
+export M1
+export MES
+export MESCC
+export MES_DEBUG
+export MES_PREFIX
+export ONE_SOURCE
+export PREFIX
+export PREPROCESS
+export TINYCC_SEED
+
+PREFIX=usr
+HEX2=../mescc-tools/bin/hex2
+M1=../mescc-tools/bin/M1
+BLOOD_ELF=../mescc-tools/bin/blood-elf
+MES=${MES-../mes/src/mes}
+MES_ARENA=70000000
+MES_MAX_ARENA=70000000
+export MES_ARENA MES_MAX_ARENA
+
+MES=guile
+#MES=${MES-../mes/src/mes.gcc}
+#MES=${MES-../mes/src/mes.mlibc-gcc}
+MESCC=${MESCC-../mes/pre-inst-env mescc}
+
+#GUILE_LOAD_PATH=/home/janneke/src/nyacc/module:$GUILE_LOAD_PATH
+GUILE_LOAD_PATH=nyacc
+
+MES_DEBUG=2
+MES_PREFIX=${MES_PREFIX-../mes}
+TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
+
+rm -f mes
+ln -sf $MES_PREFIX mes
+
+if [ -z "$interpreter" -a -n "$GUIX" ]; then
+    interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
+elif [ -x /lib/ld-linux.so.2 ]; then
+    # legacy non-GuixSD support
+    interpreter=/lib/ld-linux.so.2
+fi
+interpreter=${interpreter-interpreter}
+export interpreter
+
+sh build-gcc.sh
+
+PREPROCESS=1
+ONE_SOURCE=1
+
+sh build-x86.sh
+sh build.sh
+sh compile.sh
+sh link.sh ||:
+sh check.sh
+rm -rf usr
+sh install.sh
