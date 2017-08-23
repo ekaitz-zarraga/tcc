@@ -1607,10 +1607,10 @@ PUB_FUNC int tcc_get_dllexports(const char *filename, char **pp);
 #define RTLD_GLOBAL     0x100
 #define RTLD_DEFAULT    NULL
 /* dummy function for profiling */
-ST_FUNC void *dlopen(const char *filename, int flag);
-ST_FUNC void dlclose(void *p);
-ST_FUNC const char *dlerror(void);
-ST_FUNC void *dlsym(void *handle, const char *symbol);
+void *dlopen(const char *filename, int flag);
+int dlclose(void *p);
+char const *dlerror(void);
+void *dlsym(void *handle, const char *symbol);
 #endif
 #ifdef CONFIG_TCC_BACKTRACE
 ST_DATA int rt_num_callers;

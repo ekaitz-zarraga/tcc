@@ -768,17 +768,21 @@ static int rt_get_caller_pc(addr_t *paddr, CONTEXT *uc, int level)
 /* ------------------------------------------------------------- */
 #ifdef CONFIG_TCC_STATIC
 
+#if !BOOTSTRAP
 /* dummy function for profiling */
-ST_FUNC void *dlopen(const char *filename, int flag)
+void *dlopen(const char *filename, int flag)
 {
     return NULL;
 }
 
-ST_FUNC void dlclose(void *p)
+int
+dlclose(void *p)
 {
+  return 0;
 }
+#endif
 
-ST_FUNC const char *dlerror(void)
+char const *dlerror(void)
 {
     return "error";
 }
@@ -802,7 +806,7 @@ static TCCSyms tcc_syms[] = {
     { NULL, NULL },
 };
 
-ST_FUNC void *dlsym(void *handle, const char *symbol)
+void *dlsym(void *handle, const char *symbol)
 {
     TCCSyms *p;
     p = tcc_syms;
