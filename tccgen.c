@@ -28,6 +28,9 @@
    rsym: return symbol
    anon_sym: anonymous symbol index
 */
+#if BOOTSTRAP //MESC
+SValue *vstack;
+#endif
 ST_DATA int rsym, anon_sym, ind, loc;
 
 ST_DATA Sym *sym_free_first;

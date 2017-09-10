@@ -251,6 +251,10 @@ int main(int argc, char **argv)
     unsigned start_time = 0;
     const char *first_file;
 
+#if BOOTSTRAP //MESC bug
+    vstack = &__vstack[1];
+#endif
+
 redo:
     s = tcc_new();
     opt = tcc_parse_args(s, &argc, &argv, 1);

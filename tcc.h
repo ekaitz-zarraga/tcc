@@ -1313,7 +1313,15 @@ ST_DATA CType char_pointer_type, func_old_type, int_type, size_type;
 ST_DATA SValue __vstack[1+/*to make bcheck happy*/VSTACK_SIZE];
 ST_DATA SValue *vtop;
 ST_DATA SValue *pvtop;
-#define vstack  (__vstack + 1)
+#if BOOTSTRAP
+#if __MESC__
+SValue *vstack;
+#else
+extern SValue *vstack;
+#endif
+#else
+#define vstack (__vstack + 1)
+#endif
 ST_DATA int rsym, anon_sym, ind, loc;
 
 ST_DATA int const_wanted; /* true if constant wanted */
