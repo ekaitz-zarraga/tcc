@@ -295,6 +295,8 @@ char *trace_buffer = "                                        ";
 # define PUB_FUNC
 #endif
 
+#if !__MESC__
+
 #ifdef ONE_SOURCE
 #define ST_INLN static inline
 #define ST_FUNC static
@@ -303,6 +305,15 @@ char *trace_buffer = "                                        ";
 #define ST_INLN
 #define ST_FUNC
 #define ST_DATA extern
+#endif
+
+#else // __MESC__
+
+#define inline
+#define ST_INLN
+#define ST_FUNC
+#define ST_DATA
+
 #endif
 
 #ifdef TCC_PROFILE /* profile all functions */
@@ -1144,11 +1155,14 @@ PUB_FUNC void *tcc_realloc_debug(void *ptr, unsigned long size, const char *file
 PUB_FUNC char *tcc_strdup_debug(const char *str, const char *file, int line);
 #endif
 
+#if  !__MESC__
 #define free(p) use_tcc_free(p)
 #define malloc(s) use_tcc_malloc(s)
 #define realloc(p, s) use_tcc_realloc(p, s)
 #undef strdup
 #define strdup(s) use_tcc_strdup(s)
+#endif
+
 PUB_FUNC void tcc_memcheck(void);
 PUB_FUNC void tcc_error_noabort(const char *fmt, ...);
 PUB_FUNC NORETURN void tcc_error(const char *fmt, ...);
@@ -1689,11 +1703,13 @@ ST_FUNC void gen_makedeps(TCCState *s, const char *target, const char *filename)
 #endif
 
 /********************************************************/
+#if !__MESC__
 #undef ST_DATA
 #ifdef ONE_SOURCE
 #define ST_DATA static
 #else
 #define ST_DATA
+#endif
 #endif
 /********************************************************/
 #endif /* _TCC_H */
