@@ -40,6 +40,10 @@ ST_DATA TokenSym **table_ident;
 
 /* ------------------------------------------------------------------------- */
 
+#if __MESC__
+#define static
+#endif
+
 static TokenSym *hash_ident[TOK_HASH_SIZE];
 static char token_buf[STRING_MAX_SIZE + 1];
 static CString cstr_buf;
@@ -56,11 +60,19 @@ static struct TinyAlloc *cstr_alloc;
 
 static TokenString *macro_stack;
 
+#if !__MESC__
 static const char tcc_keywords[] = 
 #define DEF(id, str) str "\0"
 #include "tcctok.h"
 #undef DEF
 ;
+#else
+static const char *tcc_keywords =
+#define DEF(id, str) str "\0"
+#include "tcctok.h"
+#undef DEF
+;
+#endif
 
 /* WARNING: the content of this string encodes token numbers */
 static const unsigned char tok_two_chars[] =
@@ -2447,11 +2459,14 @@ static void parse_number(const char *p)
             }
         }
 
+#if !__MESC__
         /* Whether 64 bits are needed to hold the constant's value */
         if (n & 0xffffffff00000000LL || must_64bit) {
             tok = TOK_CLLONG;
             n1 = n >> 32;
-	} else {
+	} else
+#endif
+          {
             tok = TOK_CINT;
             n1 = n;
         }
@@ -3581,7 +3596,7 @@ ST_FUNC void tccpp_new(TCCState *s)
     p = tcc_keywords;
     while (*p) {
         r = p;
-        for(;;) {
+        while (1) {
             c = *r++;
             if (c == '\0')
                 break;
@@ -3838,3 +3853,6 @@ ST_FUNC int tcc_preprocess(TCCState *s1)
 }
 
 /* ------------------------------------------------------------------------- */
+#if __MESC__
+#undef static
+#endif
