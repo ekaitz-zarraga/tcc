@@ -285,13 +285,18 @@ static void update_storage(Sym *sym)
     t = sym->type.t;
     esym = &((ElfW(Sym) *)symtab_section->data)[sym->c];
 
+#if 0 // __MESC__
     if (t & VT_VIS_MASK)
         esym->st_other = (esym->st_other & ~ELFW(ST_VISIBILITY)(-1))
             | ((t & VT_VIS_MASK) >> VT_VIS_SHIFT);
 
     if (t & VT_WEAK)
         esym->st_info = ELFW(ST_INFO)(STB_WEAK, ELFW(ST_TYPE)(esym->st_info));
-
+#else
+#if !__MESC__
+#warning "FIXME: tccgen.c update_storage"
+#endif
+#endif
 #ifdef TCC_TARGET_PE
     if (t & VT_EXPORT)
         esym->st_other |= ST_PE_EXPORT;
