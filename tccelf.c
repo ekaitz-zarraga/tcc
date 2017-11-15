@@ -2167,7 +2167,9 @@ static int elf_output_file(TCCState *s1, const char *filename)
         ret = final_sections_reloc(s1);
         if (ret)
             goto the_end;
+#if !BOOTSTRAP
 	tidy_section_headers(s1, sec_order);
+#endif
     }
 
     /* Perform relocation to GOT or PLT entries */
