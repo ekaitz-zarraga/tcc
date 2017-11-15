@@ -997,7 +997,11 @@ struct filespec {
 #define TOK_A_SAR 0x82
 
 #ifndef offsetof
+#if !BOOTSTRAP
 #define offsetof(type, field) ((size_t) &((type *)0)->field)
+#else
+#define offsetof(type, field) (&((type *)0)->field)
+#endif
 #endif
 
 #ifndef countof
