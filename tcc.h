@@ -24,6 +24,21 @@
 #define _GNU_SOURCE
 #include "config.h"
 
+#if !BOOTSTRAP
+#define eputs(s)
+#define eputc(c)
+#define trace_enter(s)
+#define trace_exit(s)
+#define trace(s)
+#else /* BOOTSTRAP */
+#include <mlibc.h>
+int trace_index = 0;
+char *trace_buffer = "                                        ";
+#define trace_enter(s) {trace_index++;eputs (trace_buffer+40-trace_index);eputs (s);eputs (" enter{\n");}
+#define trace_exit(s) {eputs (trace_buffer+40-trace_index);eputs (s);eputs (" exit}\n");trace_index--;}
+#define trace(s) {eputs (trace_buffer+40-trace_index);eputs (s);}
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

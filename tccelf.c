@@ -2169,14 +2169,18 @@ static int elf_output_file(TCCState *s1, const char *filename)
         ret = final_sections_reloc(s1);
         if (ret)
             goto the_end;
+#if !BOOTSTRAP
 	tidy_section_headers(s1, sec_order);
+#endif
     }
 
     /* Perform relocation to GOT or PLT entries */
     if (file_type == TCC_OUTPUT_EXE && s1->static_link)
         fill_got(s1);
+#if !BOOTSTRAP
     else if (s1->got)
         fill_local_got_entries(s1);
+#endif
 
     /* Create the ELF file with name 'filename' */
     ret = tcc_write_elf_file(s1, filename, phnum, phdr, file_offset, sec_order);
