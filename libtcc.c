@@ -32,7 +32,11 @@ ST_DATA int tcc_ext = 1;
 /* XXX: get rid of this ASAP */
 ST_DATA struct TCCState *tcc_state;
 
+#if __MESC__
+int nb_states;
+#else
 static int nb_states;
+#endif
 
 /********************************************************/
 
