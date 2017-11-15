@@ -521,6 +521,7 @@ static void sig_error(int signum, siginfo_t *siginf, void *puc)
 /* Generate a stack backtrace when a CPU exception occurs. */
 static void set_exception_handler(void)
 {
+#if !__MESC__
     struct sigaction sigact;
     /* install TCC signal handlers to print debug info on fatal
        runtime errors */
@@ -532,6 +533,7 @@ static void set_exception_handler(void)
     sigaction(SIGSEGV, &sigact, NULL);
     sigaction(SIGBUS, &sigact, NULL);
     sigaction(SIGABRT, &sigact, NULL);
+#endif
 }
 
 /* ------------------------------------------------------------- */
