@@ -20,6 +20,10 @@
 
 #include "tcc.h"
 
+#if __MESC__
+#define static
+#endif
+
 /********************************************************/
 /* global variables */
 
@@ -2972,7 +2976,11 @@ ST_FUNC void vstore(void)
         /* mask and shift source */
         if((ft & VT_BTYPE) != VT_BOOL) {
             if((ft & VT_BTYPE) == VT_LLONG) {
+#if !__MESC__
                 vpushll((1ULL << bit_size) - 1ULL);
+#else
+                vpushll((1UL << bit_size) - 1UL);
+#endif
             } else {
                 vpushi((1 << bit_size) - 1);
             }
@@ -2983,7 +2991,12 @@ ST_FUNC void vstore(void)
         /* load destination, mask and or with source */
         vswap();
         if((ft & VT_BTYPE) == VT_LLONG) {
+#if !__MESC__
             vpushll(~(((1ULL << bit_size) - 1ULL) << bit_pos));
+#else
+            vpushll(~(((1UL << bit_size) - 1UL) << bit_pos));
+#endif
+
         } else {
             vpushi(~(((1 << bit_size) - 1) << bit_pos));
         }
@@ -4726,15 +4739,27 @@ ST_FUNC void unary(void)
 
     // special qnan , snan and infinity values
     case TOK___NAN__:
+#if !__MESC__
         vpush64(VT_DOUBLE, 0x7ff8000000000000ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff80000UL);
+#endif
         next();
         break;
     case TOK___SNAN__:
+#if !__MESC__
         vpush64(VT_DOUBLE, 0x7ff0000000000001ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff00000UL);
+#endif
         next();
         break;
     case TOK___INF__:
+#if !__MESC__
         vpush64(VT_DOUBLE, 0x7ff0000000000000ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff00000UL);
+#endif
         next();
         break;
 
