@@ -341,7 +341,8 @@ ST_INLN void cstr_ccat(CString *cstr, int ch)
     size = cstr->size + 1;
     if (size > cstr->size_allocated)
         cstr_realloc(cstr, size);
-    ((unsigned char *)cstr->data)[size - 1] = ch;
+    unsigned char* p = cstr->data;
+    p[size - 1] = ch;
     cstr->size = size;
 }
 
@@ -1295,7 +1296,8 @@ static int macro_is_equal(const int *a, const int *b)
         /* first time preallocate macro_equal_buf, next time only reset position to start */
         cstr_reset(&macro_equal_buf);
         TOK_GET(&t, &a, &cv);
-        cstr_cat(&macro_equal_buf, get_tok_str(t, &cv), 0);
+        char *s = get_tok_str(t, &cv);
+        cstr_cat(&macro_equal_buf, s, 0);
         TOK_GET(&t, &b, &cv);
         if (strcmp(macro_equal_buf.data, get_tok_str(t, &cv)))
             return 0;
@@ -1331,7 +1333,9 @@ ST_INLN Sym *define_find(int v)
     v -= TOK_IDENT;
     if ((unsigned)v >= (unsigned)(tok_ident - TOK_IDENT))
         return NULL;
-    return table_ident[v]->sym_define;
+    TokenSym *t = table_ident[v];
+    Sym *s = t->sym_define;
+    return s;
 }
 
 /* free define stack until top reaches 'b' */
