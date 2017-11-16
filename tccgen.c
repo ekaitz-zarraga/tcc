@@ -60,13 +60,19 @@ ST_DATA const char *funcname;
 
 ST_DATA CType char_pointer_type, func_old_type, int_type, size_type;
 
+struct case_t {
+  int64_t v1;
+  int64_t v2;
+  int sym;
+};
+
 ST_DATA struct switch_t {
-    struct case_t {
-        int64_t v1, v2;
-	int sym;
-    } **p; int n; /* list of case ranges */
+    struct case_t **p;
+    int n; /* list of case ranges */
     int def_sym; /* default symbol */
-} *cur_switch; /* current switch */
+};
+
+struct switch_t *cur_switch;
 
 /* ------------------------------------------------------------------------- */
 
