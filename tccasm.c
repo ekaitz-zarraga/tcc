@@ -1152,9 +1152,12 @@ static void parse_asm_operands(ASMOperand *operands, int *nb_operands_ptr,
                 next();
                 skip(']');
             }
-	    parse_mult_str(&astr, "string constant");
+	    parse_mult_str(&astr, "parse_asm_operands string constant");
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
             op->constraint = tcc_malloc(astr.size);
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
             strcpy(op->constraint, astr.data);
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
 	    cstr_free(&astr);
             skip('(');
             gexpr();
@@ -1193,13 +1196,17 @@ ST_FUNC void asm_instr(void)
     int nb_outputs, nb_operands, i, must_subst, out_reg;
     uint8_t clobber_regs[NB_ASM_REGS];
 
+    trace_enter ("asm_instr");
     next();
+    trace ("asm_instr 01\n");
     /* since we always generate the asm() instruction, we can ignore
        volatile */
     if (tok == TOK_VOLATILE1 || tok == TOK_VOLATILE2 || tok == TOK_VOLATILE3) {
         next();
     }
+    trace ("asm_instr 02\n");
     parse_asm_str(&astr);
+    trace ("asm_instr astr.data="); eputs  (astr.data); eputs ("\n");
     nb_operands = 0;
     nb_outputs = 0;
     must_subst = 0;
@@ -1252,6 +1259,7 @@ ST_FUNC void asm_instr(void)
 #ifdef ASM_DEBUG
     printf("asm: \"%s\"\n", (char *)astr.data);
 #endif
+    trace ("asm_instr asm:"); eputs (astr.data); eputs ("\n");
     if (must_subst) {
         subst_asm_operands(operands, nb_operands, &astr1, &astr);
         cstr_free(&astr);
@@ -1261,6 +1269,7 @@ ST_FUNC void asm_instr(void)
 #ifdef ASM_DEBUG
     printf("subst_asm: \"%s\"\n", (char *)astr1.data);
 #endif
+    trace ("asm_instr subst:"); eputs (astr1.data); eputs ("\n");
 
     /* generate loads */
     asm_gen_code(operands, nb_operands, nb_outputs, 0, 
@@ -1284,6 +1293,7 @@ ST_FUNC void asm_instr(void)
         vpop();
     }
     cstr_free(&astr1);
+    trace_exit ("asm_instr");
 }
 
 ST_FUNC void asm_global_instr(void)

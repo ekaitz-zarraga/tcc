@@ -1591,6 +1591,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
     ASMOperand *op;
     int i, reg;
 
+    trace_enter ("asm_gen_code");
     /* Strictly speaking %Xbp and %Xsp should be included in the
        call-preserved registers, but currently it doesn't matter.  */
 #ifdef TCC_TARGET_X86_64
@@ -1684,6 +1685,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
             }
         }
     }
+    trace_exit ("asm_gen_code");
 }
 
 ST_FUNC void asm_clobber(uint8_t *clobber_regs, const char *str)
