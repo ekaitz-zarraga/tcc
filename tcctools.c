@@ -88,20 +88,27 @@ ST_FUNC int tcc_tool_ar(TCCState *s1, int argc, char **argv)
         ARFMAG
         };
 
-    FILE *fi, *fh = NULL, *fo = NULL;
+    int ret = 2;
+    FILE *fi;
+    FILE *fh = NULL;
+    FILE *fo = NULL;
     ElfW(Ehdr) *ehdr;
     ElfW(Shdr) *shdr;
     ElfW(Sym) *sym;
     int i, fsize, i_lib, i_obj;
-    char *buf, *shstr, *symtab = NULL, *strtab = NULL;
+    char *buf;
+    char *shstr;
+    char *symtab = NULL;
+    char *strtab = NULL;
     int symtabsize = 0;//, strtabsize = 0;
     char *anames = NULL;
     int *afpos = NULL;
     int istrlen, strpos = 0, fpos = 0, funccnt = 0, funcmax, hofs;
-    char tfile[260], stmp[20];
-    char *file, *name;
-    int ret = 2;
-    const char *ops_conflict = "habdioptxN";  // unsupported but destructive if ignored.
+    char tfile[260];
+    char stmp[20];
+    char *file;
+    char *name;
+    char const *ops_conflict = "habdioptxN";  // unsupported but destructive if ignored.
     int verbose = 0;
 
     i_lib = 0; i_obj = 0;  // will hold the index of the lib and first obj

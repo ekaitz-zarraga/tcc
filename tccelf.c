@@ -2902,7 +2902,8 @@ static inline int new_undef_syms(void)
 
 static int ld_add_file_list(TCCState *s1, const char *cmd, int as_needed)
 {
-    char filename[1024], libname[1024];
+    char filename[1024];
+    char libname[1024];
     int t, group, nblibs = 0, ret = 0;
     char **libs = NULL;
 

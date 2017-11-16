@@ -47,7 +47,9 @@ ST_DATA int vlas_in_scope; /* number of VLAs that are currently in scope */
 ST_DATA int vla_sp_root_loc; /* vla_sp_loc for SP before any VLAs were pushed */
 ST_DATA int vla_sp_loc; /* Pointer to variable holding location to store stack pointer on the stack when modifying stack pointer */
 
-ST_DATA SValue __vstack[1+VSTACK_SIZE], *vtop, *pvtop;
+ST_DATA SValue __vstack[1+VSTACK_SIZE];
+ST_DATA SValue *vtop;
+ST_DATA SValue *pvtop;
 
 ST_DATA int const_wanted; /* true if constant wanted */
 ST_DATA int nocode_wanted; /* true if no code generation wanted for an expression */
@@ -2782,7 +2784,8 @@ static void type_to_str(char *buf, int buf_size,
 static void gen_assign_cast(CType *dt)
 {
     CType *st, *type1, *type2, tmp_type1, tmp_type2;
-    char buf1[256], buf2[256];
+    char buf1[256];
+    char buf2[256];
     int dbt, sbt;
 
     st = &vtop->type; /* source type */

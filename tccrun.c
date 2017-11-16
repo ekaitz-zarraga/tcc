@@ -312,7 +312,8 @@ ST_FUNC void tcc_set_num_callers(int n)
    the stabs debug information */
 static addr_t rt_printline(addr_t wanted_pc, const char *msg)
 {
-    char func_name[128], last_func_name[128];
+    char func_name[128];
+    char last_func_name[128];
     addr_t func_addr, last_pc, pc;
     const char *incl_files[INCLUDE_STACK_SIZE];
     int incl_index, len, last_line_num, i;

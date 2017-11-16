@@ -680,7 +680,8 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     const ASMInstr *pa;
     int i, modrm_index, modreg_index, reg, v, op1, seg_prefix, pc;
     int nb_ops, s;
-    Operand ops[MAX_OPERANDS], *pop;
+    Operand ops[MAX_OPERANDS];
+    Operand *pop;
     int op_type[3]; /* decoded op type */
     int alltypes;   /* OR of all operand types */
     int autosize;

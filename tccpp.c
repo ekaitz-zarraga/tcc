@@ -1691,7 +1691,8 @@ ST_FUNC void preprocess(int is_bof)
 {
     TCCState *s1 = tcc_state;
     int i, c, n, saved_parse_flags;
-    char buf[1024], *q;
+    char buf[1024];
+    char *q;
     Sym *s;
 
     saved_parse_flags = parse_flags;
@@ -2094,7 +2095,8 @@ static void parse_escape_string(CString *outstr, const uint8_t *buf, int is_long
 
 static void parse_string(const char *s, int len)
 {
-    uint8_t buf[1000], *p = buf;
+    uint8_t buf[1000];
+    uint8_t *p = buf;
     int is_long, sep;
 
     if ((is_long = *s == 'L'))
