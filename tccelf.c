@@ -1971,8 +1971,8 @@ static void tidy_section_headers(TCCState *s1, int *sec_order)
     Section **snew, *s;
     ElfW(Sym) *sym;
 
-    snew = tcc_malloc(s1->nb_sections * sizeof(snew[0]));
-    backmap = tcc_malloc(s1->nb_sections * sizeof(backmap[0]));
+    snew = tcc_malloc(s1->nb_sections * sizeof(struct Section*));
+    backmap = tcc_malloc(s1->nb_sections * sizeof(int));
     for (i = 0, nnew = 0, l = s1->nb_sections; i < s1->nb_sections; i++) {
 	s = s1->sections[sec_order[i]];
 	if (!i || s->sh_name) {

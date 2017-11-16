@@ -1751,7 +1751,7 @@ ST_FUNC void preprocess(int is_bof)
             inp();
             q = buf;
             while (ch != c && ch != '\n' && ch != CH_EOF) {
-                if ((q - buf) < sizeof(buf) - 1)
+                if ((q - buf) < 1024 - 1)
                     *q++ = ch;
                 if (ch == '\\') {
                     if (handle_stray_noerror() == 0)
@@ -1778,7 +1778,7 @@ ST_FUNC void preprocess(int is_bof)
             next();
             buf[0] = '\0';
 	    while (tok != TOK_LINEFEED) {
-		pstrcat(buf, sizeof(buf), get_tok_str(tok, &tokc));
+		pstrcat(buf, 1024, get_tok_str(tok, &tokc));
 		next();
 	    }
 	    len = strlen(buf);
@@ -1820,11 +1820,11 @@ ST_FUNC void preprocess(int is_bof)
                 /* search in all the include paths */
                 int j = i - 2, k = j - s1->nb_include_paths;
                 path = k < 0 ? s1->include_paths[j] : s1->sysinclude_paths[k];
-                pstrcpy(buf1, sizeof(buf1), path);
-                pstrcat(buf1, sizeof(buf1), "/");
+                pstrcpy(buf1, sizeof (file->filename), path);
+                pstrcat(buf1, sizeof (file->filename), "/");
             }
 
-            pstrcat(buf1, sizeof(buf1), buf);
+            pstrcat(buf1, sizeof (file->filename), buf);
             e = search_cached_include(s1, buf1, 0);
             if (e && (define_find(e->ifndef_macro) || e->once == pp_once)) {
                 /* no need to parse the include because the 'ifndef macro'
@@ -1835,8 +1835,11 @@ ST_FUNC void preprocess(int is_bof)
                 goto include_done;
             }
 
-            if (tcc_open(s1, buf1) < 0)
+            trace ("preprocess 80 buf1="); eputs (buf1); eputs ("\n");
+            if (tcc_open(s1, buf1) < 0) {
+                trace ("preprocess not found="); eputs (buf1); eputs ("\n");
                 continue;
+            }
 
             file->include_next_index = i + 1;
 #ifdef INC_DEBUG
