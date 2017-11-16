@@ -137,7 +137,8 @@ BOOL WINAPI DllMain (HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved)
 /* copy a string and truncate it. */
 ST_FUNC char *pstrcpy(char *buf, int buf_size, const char *s)
 {
-    char *q, *q_end;
+    char *q;
+    char *q_end;
     int c;
 
     if (buf_size > 0) {
@@ -480,7 +481,8 @@ static void strcat_printf(char *buf, int buf_size, const char *fmt, ...)
 static void error1(TCCState *s1, int is_warning, const char *fmt, va_list ap)
 {
     char buf[2048];
-    BufferedFile **pf, *f;
+    BufferedFile **pf;
+    BufferedFile *f;
 
     buf[0] = '\0';
     /* use upper file if inline ":asm:" or token ":paste:" */

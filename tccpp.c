@@ -143,7 +143,8 @@ typedef struct TinyAlloc {
     uint8_t *buffer;
     uint8_t *p;
     unsigned  nb_allocs;
-    struct TinyAlloc *next, *top;
+    struct TinyAlloc *next;
+    struct TinyAlloc *top;
 #ifdef TAL_INFO
     unsigned  nb_peak;
     unsigned  nb_total;
