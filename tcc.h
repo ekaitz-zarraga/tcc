@@ -662,6 +662,13 @@ struct sym_attr {
 #endif
 };
 
+enum TCCState_pflag {
+  LINE_MACRO_OUTPUT_FORMAT_GCC,
+  LINE_MACRO_OUTPUT_FORMAT_NONE,
+  LINE_MACRO_OUTPUT_FORMAT_STD,
+  LINE_MACRO_OUTPUT_FORMAT_P10 = 11
+};
+
 struct TCCState {
 
     int verbose; /* if true, display some information during compilation */
@@ -755,12 +762,7 @@ struct TCCState {
 
     /* output file for preprocessing (-E) */
     FILE *ppfp;
-    enum {
-	LINE_MACRO_OUTPUT_FORMAT_GCC,
-	LINE_MACRO_OUTPUT_FORMAT_NONE,
-	LINE_MACRO_OUTPUT_FORMAT_STD,
-    LINE_MACRO_OUTPUT_FORMAT_P10 = 11
-    } Pflag; /* -P switch */
+    enum TCCState_pflag Pflag;
     char dflag; /* -dX value */
 
     /* for -MD/-MF: collected dependencies for this compilation */
