@@ -655,28 +655,24 @@ typedef struct
 
 /* Dynamic section entry.  */
 
-union Elf32_Dyn_un
-{
-    Elf32_Word d_val;			/* Integer value */
-    Elf32_Addr d_ptr;			/* Address value */
-};
-
 typedef struct
 {
   Elf32_Sword	d_tag;			/* Dynamic entry type */
-  union Elf32_Dyn_un d_un;
+  union
+    {
+      Elf32_Word d_val;			/* Integer value */
+      Elf32_Addr d_ptr;			/* Address value */
+    } d_un;
 } Elf32_Dyn;
-
-union Elf64_Dyn_un
-{
-    Elf64_Xword d_val;			/* Integer value */
-    Elf64_Addr d_ptr;			/* Address value */
-};
 
 typedef struct
 {
   Elf64_Sxword	d_tag;			/* Dynamic entry type */
-  union Elf64_Dyn_un d_un;
+  union
+    {
+      Elf64_Xword d_val;		/* Integer value */
+      Elf64_Addr d_ptr;			/* Address value */
+    } d_un;
 } Elf64_Dyn;
 
 /* Legal values for d_tag (dynamic entry type).  */
@@ -958,32 +954,28 @@ typedef struct
    types are an arrangement between the exec server and the program
    interpreter, so we don't fully specify them here.  */
 
-union Elf32_auxv_t_a_un
-{
-  uint32_t a_val;		/* Integer value */
-  /* We use to have pointer elements added here.  We cannot do that,
-     though, since it does not work when using 32-bit definitions
-     on 64-bit platforms and vice versa.  */
-};
-
 typedef struct
 {
   uint32_t a_type;		/* Entry type */
-  union Elf32_auxv_t_a_un a_un;
+  union
+    {
+      uint32_t a_val;		/* Integer value */
+      /* We use to have pointer elements added here.  We cannot do that,
+	 though, since it does not work when using 32-bit definitions
+	 on 64-bit platforms and vice versa.  */
+    } a_un;
 } Elf32_auxv_t;
-
-union Elf64_auxv_t_a_un
-{
-  uint64_t a_val;		/* Integer value */
-  /* We use to have pointer elements added here.  We cannot do that,
-     though, since it does not work when using 32-bit definitions
-     on 64-bit platforms and vice versa.  */
-};
 
 typedef struct
 {
   uint64_t a_type;		/* Entry type */
-  union Elf64_auxv_t_a_un a_un;
+  union
+    {
+      uint64_t a_val;		/* Integer value */
+      /* We use to have pointer elements added here.  We cannot do that,
+	 though, since it does not work when using 32-bit definitions
+	 on 64-bit platforms and vice versa.  */
+    } a_un;
 } Elf64_auxv_t;
 
 /* Legal values for a_type (entry type).  */
@@ -1494,22 +1486,18 @@ typedef struct
 
 /* Entries found in sections of type SHT_MIPS_GPTAB.  */
 
-struct Elf32_gptab_header
-{
-  Elf32_Word gt_current_g_value;	/* -G value used for compilation */
-  Elf32_Word gt_unused;		/* Not used */
-};
-
-struct Elf32_gptab_entry
-{
-  Elf32_Word gt_g_value;		/* If this value were used for -G */
-  Elf32_Word gt_bytes;		/* This many bytes would be used */
-};
-
 typedef union
 {
-  struct Elf32_gptab_header gt_header;
-  struct Elf32_gptab_entry gt_entry;
+  struct
+    {
+      Elf32_Word gt_current_g_value;	/* -G value used for compilation */
+      Elf32_Word gt_unused;		/* Not used */
+    } gt_header;			/* First entry in section */
+  struct
+    {
+      Elf32_Word gt_g_value;		/* If this value were used for -G */
+      Elf32_Word gt_bytes;		/* This many bytes would be used */
+    } gt_entry;				/* Subsequent entries in section */
 } Elf32_gptab;
 
 /* Entry found in sections of type SHT_MIPS_REGINFO.  */
