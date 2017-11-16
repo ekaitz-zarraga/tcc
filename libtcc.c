@@ -764,6 +764,9 @@ LIBTCCAPI TCCState *tcc_new(void)
     define_push(TOK___FILE__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___DATE__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___TIME__, MACRO_OBJ, NULL, NULL);
+#if __MESC__
+        tcc_define_symbol(s, "__TINYC__", "0");
+#else
     {
         /* define __TINYC__ 92X  */
         char buffer[32]; int a,b,c;
@@ -771,7 +774,7 @@ LIBTCCAPI TCCState *tcc_new(void)
         sprintf(buffer, "%d", a*10000 + b*100 + c);
         tcc_define_symbol(s, "__TINYC__", buffer);
     }
-
+#endif
     /* standard defines */
     tcc_define_symbol(s, "__STDC__", NULL);
     tcc_define_symbol(s, "__STDC_VERSION__", "199901L");
