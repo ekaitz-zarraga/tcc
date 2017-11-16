@@ -400,6 +400,12 @@ typedef struct CType {
     struct Sym *ref;
 } CType;
 
+
+struct CValue_str {
+    int size;
+    const void *data;
+};
+
 /* constant value */
 typedef union CValue {
 #if HAVE_FLOAT
@@ -412,10 +418,7 @@ typedef union CValue {
     int f;
 #endif
     uint64_t i;
-    struct {
-        int size;
-        const void *data;
-    } str;
+    struct CValue_str str;
     int tab[LDOUBLE_SIZE/4];
 } CValue;
 
