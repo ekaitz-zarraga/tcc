@@ -700,7 +700,8 @@ ST_FUNC void gtst_addr(int inv, int a)
 {
     int v = vtop->r & VT_VALMASK;
     if (v == VT_CMP) {
-	inv ^= (vtop--)->c.i;
+	inv ^= vtop->c.i;
+	vtop--;
 	a -= ind + 2;
 	if (a == (char)a) {
 	    g(inv - 32);
