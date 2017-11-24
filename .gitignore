@@ -2,6 +2,12 @@
 \#*
 .#*
 *.o
+*.E
+*.hex2
+*.M1
+*.m1
+*.i686-unknown-linux-gnu-out
+*.mes-out
 *.a
 *.exe
 *.dll
