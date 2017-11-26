@@ -768,7 +768,11 @@ struct TCCState {
     void *error_opaque;
     void (*error_func)(void *opaque, const char *msg);
     int error_set_jmp_enabled;
+#if __MESC__
+    __jmp_buf error_jmp_buf[1];
+#else
     jmp_buf error_jmp_buf;
+#endif
     int nb_errors;
 
     /* output file for preprocessing (-E) */
