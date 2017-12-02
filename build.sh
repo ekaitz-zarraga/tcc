@@ -6,9 +6,11 @@ CC=${MESCC-mescc}
 MESCC=${MESCC-mescc}
 HEX2=${HEX2-hex2}
 M1=${M1-M1}
+BLOOD_ELF=${BLOOD_ELF-blood-elf}
 CFLAGS=${CFLAGS-}
 
 MES_PREFIX=${MES_PREFIX-$(dirname $MESCC)/../share/mes}
+MES_SEED=${MES_SEED-../mes-seed}
 TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
 cp $TINYCC_SEED/crt1.mlibc-o crt1.o
 
@@ -47,15 +49,24 @@ tr -d '\r' < tcc.M1 > tcc.m1
 
 $M1 --LittleEndian --Architecture=1\
  -f $MES_PREFIX/stage0/x86.M1\
- -f $MES_PREFIX/lib/libc-mes+tcc.M1\
+ -f $MES_SEED/libc-mes+tcc.M1\
  -f tcc.m1\
-  > tcc.hex2
+ -o tcc.hex2
+
+$BLOOD_ELF\
+    -f $MES_PREFIX/stage0/x86.M1\
+    -f $MES_SEED/libc-mes+tcc.M1\
+    -f tcc.m1\
+    -o tcc-blood-elf-footer.M1
+
+$M1 --LittleEndian --Architecture=1\
+    -f tcc-blood-elf-footer.M1\
+    -o tcc-blood-elf-footer.hex2
 
 $HEX2 --LittleEndian --Architecture=1 --BaseAddress=0x1000000\
  -f $MES_PREFIX/stage0/elf32-header.hex2\
  -f $MES_PREFIX/lib/crt1.hex2\
  -f tcc.hex2\
- -f $MES_PREFIX/stage0/elf32-footer-single-main.hex2\
- > mes-tcc
-
-chmod +x mes-tcc
+ -f tcc-blood-elf-footer.hex2\
+ --exec_enable\
+ -o mes-tcc
