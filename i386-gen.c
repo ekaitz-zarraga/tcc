@@ -769,7 +769,13 @@ ST_FUNC void gen_opi(int op)
             r = gv(RC_INT);
             vswap();
             c = vtop->c.i;
+#if __MESC__
+            char ch = c;
+            if (c == ch && ((ch >= 0 && ch < 128) || c < 0)) {
+#else
             if (c == (char)c) {
+#endif
+                trace ("gen_opi 15 c == char c\n");
                 /* generate inc and dec for smaller code */
                 if (c==1 && opc==0 && op != TOK_ADDC1) {
                     o (0x40 | r); // inc
