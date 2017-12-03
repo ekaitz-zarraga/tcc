@@ -1683,13 +1683,21 @@ static void gen_opl(int op)
 
 static uint64_t gen_opic_sdiv(uint64_t a, uint64_t b)
 {
+#if __MESC__
+    return a / b;
+#else
     uint64_t x = (a >> 63 ? -a : a) / (b >> 63 ? -b : b);
     return (a ^ b) >> 63 ? -x : x;
+#endif
 }
 
 static int gen_opic_lt(uint64_t a, uint64_t b)
 {
+#if __MESC__
+    return a < b;
+#else
     return (a ^ (uint64_t)1 << 63) < (b ^ (uint64_t)1 << 63);
+#endif
 }
 
 /* handle integer constant optimizations and various machine
