@@ -17,6 +17,7 @@ gcc -o tcc tcc.c\
     -DPOSIX=1\
     -I.\
     -I $MES_PREFIX/include\
+    -I $MES_PREFIX/lib\
     -D CONFIG_TCCDIR="\"$PWD\""\
     -D CONFIG_TCC_CRTPREFIX="\"$crtdir\""\
     -D CONFIG_TCC_ELFINTERP="\"$interpreter\""\

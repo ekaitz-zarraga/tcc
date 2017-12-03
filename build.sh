@@ -24,7 +24,7 @@ interpreter=${interpreter-interpreter}
 
 mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
-cp $TINYCC_SEED/libc-gcc+tcc.mlibc-o $ABSPREFIX/lib
+cp $TINYCC_SEED/libc+tcc-gcc.mlibc-o $ABSPREFIX/lib
 
 sh $MESCC -E -o tcc.E\
  $CFLAGS\
@@ -37,7 +37,7 @@ sh $MESCC -E -o tcc.E\
  -D 'CONFIG_TCC_LIBPATHS="'$ABSPREFIX'/lib:{B}/lib:."'\
  -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$PREFIX'/include:{B}/include"'\
  -D CONFIG_USE_LIBGCC=1\
- -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc-gcc+tcc.mlibc-o"'\
+ -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc+tcc-gcc.mlibc-o"'\
  -D CONFIG_TCC_STATIC=1\
  -D ONE_SOURCE=yes\
  -D TCC_TARGET_I386=1\
@@ -49,13 +49,13 @@ tr -d '\r' < tcc.M1 > tcc.m1
 
 $M1 --LittleEndian --Architecture=1\
  -f $MES_PREFIX/stage0/x86.M1\
- -f $MES_SEED/libc-mes+tcc.M1\
+ -f $MES_SEED/libc+tcc-mes.M1\
  -f tcc.m1\
  -o tcc.hex2
 
 $BLOOD_ELF\
     -f $MES_PREFIX/stage0/x86.M1\
-    -f $MES_SEED/libc-mes+tcc.M1\
+    -f $MES_SEED/libc+tcc-mes.M1\
     -f tcc.m1\
     -o tcc-blood-elf-footer.M1
 

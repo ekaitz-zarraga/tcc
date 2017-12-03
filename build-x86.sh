@@ -15,7 +15,7 @@ CFLAGS="
 -nostdlib
 -fno-builtin
 --include=$MES_PREFIX/lib/crt1.c
---include=$MES_PREFIX/lib/libc-gcc+tcc.c
+--include=$MES_PREFIX/lib/libc+tcc-gcc.c
 -Wl,-Ttext-segment=0x1000000
 "
 
@@ -29,7 +29,7 @@ interpreter=${interpreter-interpreter}
 
 mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
-cp $TINYCC_SEED/libc-gcc+tcc.mlibc-o $ABSPREFIX/lib
+cp $TINYCC_SEED/libc+tcc-gcc.mlibc-o $ABSPREFIX/lib
 $CC -g -o i686-unknown-linux-gnu-tcc\
    $CFLAGS\
    -I.\
@@ -41,7 +41,7 @@ $CC -g -o i686-unknown-linux-gnu-tcc\
    -D 'CONFIG_TCC_LIBPATHS="'$ABSPREFIX'/lib:{B}/lib:."'\
    -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$PREFIX'/include:{B}/include"'\
    -D CONFIG_USE_LIBGCC=1\
-   -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc-gcc+tcc.mlibc-o"'\
+   -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc+tcc-gcc.mlibc-o"'\
    -D CONFIG_TCC_STATIC=1\
    -D ONE_SOURCE=yes\
    -D TCC_TARGET_I386=1\
