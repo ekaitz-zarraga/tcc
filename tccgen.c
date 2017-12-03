@@ -520,7 +520,11 @@ ST_FUNC Sym *sym_find2(Sym *s, int v)
 ST_INLN Sym *struct_find(int v)
 {
     v -= TOK_IDENT;
+#if __MESC__
+    if (v <= 0)
+#else
     if ((unsigned)v >= (unsigned)(tok_ident - TOK_IDENT))
+#endif
         return NULL;
     return table_ident[v]->sym_struct;
 }
@@ -529,7 +533,11 @@ ST_INLN Sym *struct_find(int v)
 ST_INLN Sym *sym_find(int v)
 {
     v -= TOK_IDENT;
+#if __MESC__
+    if (v <= 0)
+#else
     if ((unsigned)v >= (unsigned)(tok_ident - TOK_IDENT))
+#endif
         return NULL;
     return table_ident[v]->sym_identifier;
 }
