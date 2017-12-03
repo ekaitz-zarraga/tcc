@@ -4248,7 +4248,12 @@ ST_FUNC void indir(void)
     }
     if (vtop->r & VT_LVAL)
         gv(RC_INT);
+#if BOOTSTRAP
+    CType *pt = pointed_type(&vtop->type);
+    vtop->type = *pt;
+#else
     vtop->type = *pointed_type(&vtop->type);
+#endif
     /* Arrays and functions are never lvalues */
     if (!(vtop->type.t & VT_ARRAY) && !(vtop->type.t & VT_VLA)
         && (vtop->type.t & VT_BTYPE) != VT_FUNC) {
@@ -4863,7 +4868,12 @@ ST_FUNC void unary(void)
             if ((vtop->type.t & VT_BTYPE) != VT_FUNC) {
                 /* pointer test (no array accepted) */
                 if ((vtop->type.t & (VT_BTYPE | VT_ARRAY)) == VT_PTR) {
+#if BOOTSTRAP
+                    CType *pt = pointed_type(&vtop->type);
+                    vtop->type = *pt;
+#else
                     vtop->type = *pointed_type(&vtop->type);
+#endif
                     if ((vtop->type.t & VT_BTYPE) != VT_FUNC)
                         goto error_func;
                 } else {

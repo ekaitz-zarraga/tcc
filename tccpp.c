@@ -2462,7 +2462,7 @@ static void parse_number(const char *p)
             }
         }
 
-#if !__MESC__
+#if !BOOTSTRAP //!__MESC__
         /* Whether 64 bits are needed to hold the constant's value */
         if (n & 0xffffffff00000000LL || must_64bit) {
             tok = TOK_CLLONG;
