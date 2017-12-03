@@ -1160,7 +1160,7 @@ ST_FUNC int tcc_add_crt(TCCState *s, const char *filename)
 }
 
 #if __MESC__
-char *tcc_add_library_libs[3] = { "%s/lib%s-gcc+tcc.mlibc-o", "%s/lib%s-gcc+tcc.o", NULL };
+char *tcc_add_library_libs[3] = { "%s/lib%s+tcc-gcc.mlibc-o", "%s/lib%s+tcc-gcc.o", NULL };
 #endif
 
 /* the library name is the same as the argument of the '-l' option */
@@ -1173,7 +1173,7 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
     const char *libs[] = { "%s/lib%s.dylib", "%s/lib%s.a", NULL };
     const char **pp = s->static_link ? libs + 1 : libs;
 #elif BOOTSTRAP
-    const char *libs[3] = { "%s/lib%s-gcc+tcc.mlibc-o", "%s/lib%s-gcc+tcc.o", NULL };
+    const char *libs[3] = { "%s/lib%s+tcc-gcc.mlibc-o", "%s/lib%s+tcc-gcc.o", NULL };
     const char **pp = libs;
 #else
     const char *libs[] = { "%s/lib%s.so", "%s/lib%s.a", NULL };
