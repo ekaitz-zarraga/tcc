@@ -26,7 +26,7 @@ mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
 cp $TINYCC_SEED/libc+tcc-gcc.mlibc-o $ABSPREFIX/lib
 
-sh $MESCC -E -o tcc.E\
+time $MESCC -E -o tcc.E\
  $CFLAGS\
  -I .\
  -I $MES_PREFIX/lib\
@@ -44,7 +44,7 @@ sh $MESCC -E -o tcc.E\
  -D BOOTSTRAP=1\
   tcc.c
 
-sh $MESCC -c -o tcc.M1 tcc.E
+time $MESCC -c -o tcc.M1 tcc.E
 tr -d '\r' < tcc.M1 > tcc.m1
 
 $M1 --LittleEndian --Architecture=1\

@@ -5,7 +5,11 @@ export PREFIX=usr
 export HEX2=../mescc-tools/bin/hex2
 export M1=../mescc-tools/bin/M1
 export BLOOD_ELF=../mescc-tools/bin/blood-elf
-export MESCC=../mes/guile/mescc.scm
+#export MESCC=${MESCC-../mes/guile/mescc.scm}
+export MESCC=${MESCC-../mes/scripts/mescc.mes}
+#export MES_ARENA=300000000
+#exportxMES_DEBUG=2
+#GUILE_LOAD_PATH=/home/janneke/src/nyacc/module:$GUILE_LOAD_PATH
 export MES_PREFIX=../mes
 export TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
 
