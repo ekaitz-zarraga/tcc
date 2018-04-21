@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
+
 #ifdef CONFIG_TCC_ASM
 
 ST_FUNC int asm_get_local_label_name(TCCState *s1, unsigned int n)

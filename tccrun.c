@@ -18,7 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 /* only native compiler supports -run */
 #ifdef TCC_IS_NATIVE

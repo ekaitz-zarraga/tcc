@@ -20,7 +20,9 @@
 
 #else /* !TARGET_DEFS_ONLY */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 /* Returns 1 for a code relocation, 0 for a data relocation. For unknown
    relocations, returns -1. */

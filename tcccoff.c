@@ -19,7 +19,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 #define MAXNSCNS 255		/* MAXIMUM NUMBER OF SECTIONS         */
 #define MAX_STR_TABLE 1000000

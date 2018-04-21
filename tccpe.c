@@ -18,7 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 #define PE_MERGE_DATA
 /* #define PE_PRINT_SECTIONS */

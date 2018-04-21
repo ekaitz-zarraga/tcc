@@ -74,7 +74,9 @@ enum {
 /******************************************************/
 #else /* ! TARGET_DEFS_ONLY */
 /******************************************************/
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 /* define to 1/0 to [not] have EBX as 4th register */
 #define USE_EBX 0

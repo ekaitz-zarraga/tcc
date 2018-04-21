@@ -28,7 +28,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
+#ifndef _TCC_H
 #include "tcc.h"
+#endif
 
 //#define ARMAG  "!<arch>\n"
 #define ARFMAG "`\n"
