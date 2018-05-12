@@ -270,13 +270,16 @@ static void update_storage(Sym *sym)
     t = sym->type.t;
     esym = &((ElfW(Sym) *)symtab_section->data)[sym->c];
 
+#if !__MESC__ // Nyacc 0.80.40 cpp-bug
     if (t & VT_VIS_MASK)
         esym->st_other = (esym->st_other & ~ELFW(ST_VISIBILITY)(-1))
             | ((t & VT_VIS_MASK) >> VT_VIS_SHIFT);
 
     if (t & VT_WEAK)
         esym->st_info = ELFW(ST_INFO)(STB_WEAK, ELFW(ST_TYPE)(esym->st_info));
-
+#else //__MESC__
+    // #warning work around Nyacc 0.80.42 bug.
+#endif // __MESC__
 #ifdef TCC_TARGET_PE
     if (t & VT_EXPORT)
         esym->st_other |= ST_PE_EXPORT;
