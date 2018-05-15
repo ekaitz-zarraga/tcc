@@ -2388,10 +2388,12 @@ static void parse_number(const char *p)
                 tcc_error("invalid digit");
             n1 = n;
             n = n * b + t;
+#if HAVE_LONG_LONG
             /* detect overflow */
             /* XXX: this test is not reliable */
             if (n < n1)
                 tcc_error("integer constant overflow");
+#endif
         }
 
         /* Determine the characteristics (unsigned and/or 64bit) the type of
@@ -2421,11 +2423,14 @@ static void parse_number(const char *p)
             }
         }
 
+#if HAVE_LONG_LONG
         /* Whether 64 bits are needed to hold the constant's value */
         if (n & 0xffffffff00000000LL || must_64bit) {
             tok = TOK_CLLONG;
             n1 = n >> 32;
-	} else {
+	} else
+#endif
+        {
             tok = TOK_CINT;
             n1 = n;
         }
