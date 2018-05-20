@@ -1848,11 +1848,13 @@ static void gen_opif(int op)
         case '-': f1 -= f2; break;
         case '*': f1 *= f2; break;
         case '/': 
+#if HAVE_FLOAT
             if (f2 == 0.0) {
                 if (const_wanted)
                     tcc_error("division by zero in constant");
                 goto general_case;
             }
+#endif
             f1 /= f2; 
             break;
             /* XXX: also handles tests ? */
@@ -2275,6 +2277,7 @@ static void gen_cast(CType *type)
             else if (sbt == VT_DOUBLE)
                 vtop->c.ld = vtop->c.d;
 
+#if HAVE_FLOAT
             if (df) {
                 if ((sbt & VT_BTYPE) == VT_LLONG) {
                     if ((sbt & VT_UNSIGNED) || !(vtop->c.i >> 63))
@@ -2292,11 +2295,14 @@ static void gen_cast(CType *type)
                     vtop->c.f = (float)vtop->c.ld;
                 else if (dbt == VT_DOUBLE)
                     vtop->c.d = (double)vtop->c.ld;
-            } else if (sf && dbt == (VT_LLONG|VT_UNSIGNED)) {
+            }
+              else if (sf && dbt == (VT_LLONG|VT_UNSIGNED)) {
                 vtop->c.i = vtop->c.ld;
             } else if (sf && dbt == VT_BOOL) {
                 vtop->c.i = (vtop->c.ld != 0);
-            } else {
+            } else
+#endif
+                   {
                 if(sf)
                     vtop->c.i = vtop->c.ld;
                 else if (sbt == (VT_LLONG|VT_UNSIGNED))
@@ -4658,12 +4664,14 @@ ST_FUNC void unary(void)
             /* In IEEE negate(x) isn't subtract(0,x), but rather
 	       subtract(-0, x).  */
 	    vpush(&vtop->type);
+#if HAVE_FLOAT
 	    if (t == VT_FLOAT)
 	        vtop->c.f = -1.0 * 0.0;
 	    else if (t == VT_DOUBLE)
 	        vtop->c.d = -1.0 * 0.0;
 	    else
 	        vtop->c.ld = -1.0 * 0.0;
+#endif
 	} else
 	    vpushi(0);
 	vswap();
@@ -6193,7 +6201,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 #if (defined __i386__ || defined __x86_64__) && (defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64)
                 else if (sizeof (long double) >= 10)
                     memcpy(memset(ptr, 0, LDOUBLE_SIZE), &vtop->c.ld, 10);
-#ifdef __TINYC__
+#if defined (__TINYC__) && HAVE_FLOAT
                 else if (sizeof (long double) == sizeof (double))
                     __asm__("fldl %1\nfstpt %0\n" : "=m"
                         (memset(ptr, 0, LDOUBLE_SIZE), ptr) : "m" (vtop->c.ld));

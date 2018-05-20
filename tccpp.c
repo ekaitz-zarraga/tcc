@@ -2282,7 +2282,9 @@ static void parse_number(const char *p)
             
             /* now we can generate the number */
             /* XXX: should patch directly float number */
+#if HAVE_FLOAT
             d = (double)bn[1] * 4294967296.0 + (double)bn[0];
+#endif
             d = ldexp(d, exp_val - frac_bits);
             t = toup(ch);
             if (t == 'F') {
