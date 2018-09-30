@@ -24,6 +24,28 @@
 #define _GNU_SOURCE
 #include "config.h"
 
+extern int trace_p;
+/* #define eputc(x) */
+/* #define eputs(x) */
+/* #define trace(x) */
+/* #define trace_enter(x) */
+/* #define trace_exit(x) */
+
+#if !BOOTSTRAP
+#define eputs(s)
+#define eputc(c)
+#define trace_enter(s)
+#define trace_exit(s)
+#define trace(s)
+#else /* BOOTSTRAP */
+#include <mes/lib.h>
+int trace_index = 0;
+char *trace_buffer = "                                        ";
+#define trace_enter(s) {if (trace_p) {trace_index++;eputs (trace_buffer+40-trace_index);eputs (s);eputs (" enter{\n");}}
+#define trace_exit(s) {if (trace_p) {eputs (trace_buffer+40-trace_index);eputs (s);eputs (" exit}\n");trace_index--;}}
+#define trace(s) {if (trace_p) {eputs (trace_buffer+40-trace_index);eputs (s);}}
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

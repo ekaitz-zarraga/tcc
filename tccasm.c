@@ -923,6 +923,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
 
     /* XXX: undefine C labels */
 
+    trace_enter ("tcc_assemble_internal");
     ch = file->buf_ptr[0];
     tok_flags = TOK_FLAG_BOL | TOK_FLAG_BOF;
     parse_flags = PARSE_FLAG_ASM_FILE | PARSE_FLAG_TOK_STR;
@@ -931,6 +932,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
         parse_flags |= PARSE_FLAG_PREPROCESS;
     for(;;) {
         next();
+        trace ("tcc_assemble_internal tok="); eputc (tok); eputs (" ["); eputs (itoa (tok)); eputs ("]\n");
         if (tok == TOK_EOF)
             break;
         /* generate line number info */
@@ -939,12 +941,15 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
         parse_flags |= PARSE_FLAG_LINEFEED; /* XXX: suppress that hack */
     redo:
         if (tok == '#') {
+            trace ("tcc_assemble_internal 25\n");
             /* horrible gas comment */
             while (tok != TOK_LINEFEED)
                 next();
         } else if (tok >= TOK_ASMDIR_FIRST && tok <= TOK_ASMDIR_LAST) {
+            trace ("tcc_assemble_internal 30\n");
             asm_parse_directive(s1, global);
         } else if (tok == TOK_PPNUM) {
+            trace ("tcc_assemble_internal 35\n");
 	    Sym *sym;
             const char *p;
             int n;
@@ -960,9 +965,11 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
             skip(':');
             goto redo;
         } else if (tok >= TOK_IDENT) {
+            trace ("tcc_assemble_internal 50\n");
             /* instruction or label */
             opcode = tok;
             next();
+            trace ("tcc_assemble_internal 51 tok="); eputc (tok); eputs (" ["); eputs (itoa (tok)); eputs ("]\n");
             if (tok == ':') {
                 /* handle "extern void vide(void); __asm__("vide: ret");" as
                 "__asm__("globl vide\nvide: ret");" */
@@ -980,12 +987,15 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
                 next();
                 goto redo;
             } else if (tok == '=') {
+                trace ("tcc_assemble_internal 60\n");
 		set_symbol(s1, opcode);
                 goto redo;
             } else {
+                trace ("tcc_assemble_internal 65\n");
                 asm_opcode(s1, opcode);
             }
         }
+        trace ("tcc_assemble_internal 70\n");
         /* end of line */
         if (tok != ';' && tok != TOK_LINEFEED)
             expect("end of line");
@@ -993,6 +1003,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess, int global)
     }
 
     asm_free_labels(s1);
+    trace_exit ("tcc_assemble_internal");
     return 0;
 }
 
@@ -1031,6 +1042,7 @@ static void tcc_assemble_inline(TCCState *s1, char *str, int len, int global)
     int saved_parse_flags;
     const int *saved_macro_ptr;
 
+    trace_enter ("tcc_assemble_inline");
     saved_parse_flags = parse_flags;
     saved_macro_ptr = macro_ptr;
 
@@ -1044,6 +1056,7 @@ static void tcc_assemble_inline(TCCState *s1, char *str, int len, int global)
     parse_flags = saved_parse_flags;
     set_idnum('.', (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0);
     macro_ptr = saved_macro_ptr;
+    trace_exit ("tcc_assemble_inline");
 }
 
 /* find a constraint by its number or id (gcc 3 extended
@@ -1155,9 +1168,12 @@ static void parse_asm_operands(ASMOperand *operands, int *nb_operands_ptr,
                 next();
                 skip(']');
             }
-	    parse_mult_str(&astr, "string constant");
+	    parse_mult_str(&astr, "parse_asm_operands string constant");
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
             op->constraint = tcc_malloc(astr.size);
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
             strcpy(op->constraint, astr.data);
+            trace ("parse arm_operands tokc.str.data="); eputs (tokc.str.data); eputs ("\n");
 	    cstr_free(&astr);
             skip('(');
             gexpr();
@@ -1196,13 +1212,17 @@ ST_FUNC void asm_instr(void)
     int nb_outputs, nb_operands, i, must_subst, out_reg;
     uint8_t clobber_regs[NB_ASM_REGS];
 
+    trace_enter ("asm_instr");
     next();
+    trace ("asm_instr 01\n");
     /* since we always generate the asm() instruction, we can ignore
        volatile */
     if (tok == TOK_VOLATILE1 || tok == TOK_VOLATILE2 || tok == TOK_VOLATILE3) {
         next();
     }
+    trace ("asm_instr 02\n");
     parse_asm_str(&astr);
+    trace ("asm_instr astr.data="); eputs  (astr.data); eputs ("\n");
     nb_operands = 0;
     nb_outputs = 0;
     must_subst = 0;
@@ -1255,6 +1275,7 @@ ST_FUNC void asm_instr(void)
 #ifdef ASM_DEBUG
     printf("asm: \"%s\"\n", (char *)astr.data);
 #endif
+    trace ("asm_instr asm:"); eputs (astr.data); eputs ("\n");
     if (must_subst) {
         subst_asm_operands(operands, nb_operands, &astr1, &astr);
         cstr_free(&astr);
@@ -1264,6 +1285,7 @@ ST_FUNC void asm_instr(void)
 #ifdef ASM_DEBUG
     printf("subst_asm: \"%s\"\n", (char *)astr1.data);
 #endif
+    trace ("asm_instr subst:"); eputs (astr1.data); eputs ("\n");
 
     /* generate loads */
     asm_gen_code(operands, nb_operands, nb_outputs, 0, 
@@ -1287,6 +1309,7 @@ ST_FUNC void asm_instr(void)
         vpop();
     }
     cstr_free(&astr1);
+    trace_exit ("asm_instr");
 }
 
 ST_FUNC void asm_global_instr(void)

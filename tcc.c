@@ -25,6 +25,8 @@
 #endif
 #include "tcctools.c"
 
+int trace_p = 1;
+
 static const char help[] =
     "Tiny C Compiler "TCC_VERSION" - Copyright (C) 2001-2006 Fabrice Bellard\n"
     "Usage: tcc [options...] [-o outfile] [-c] infile(s)...\n"
@@ -251,9 +253,21 @@ int main(int argc, char **argv)
     unsigned start_time = 0;
     const char *first_file;
 
+    trace_enter ("main");
 redo:
+    trace ("main 01\n");
     s = tcc_new();
+    trace ("main 02\n");
     opt = tcc_parse_args(s, &argc, &argv, 1);
+    trace ("main 03\n");
+
+
+    if (s->nb_files) {
+      struct filespec *f = s->files[0];
+      trace ("main 05 file[0]="); eputs (f->name); eputs ("\n");
+    }
+
+    trace ("main 06\n");
 
     if (n == 0) {
         if (opt == OPT_HELP)
@@ -305,19 +319,28 @@ redo:
             start_time = getclock_ms();
     }
 
+    trace ("main 20\n");
     set_environment(s);
+    trace ("main 21\n");
+
     if (s->output_type == 0)
         s->output_type = TCC_OUTPUT_EXE;
     tcc_set_output_type(s, s->output_type);
 
+    trace ("main 23\n");
+
     /* compile or add each files or library */
     for (first_file = NULL, ret = 0;;) {
+        trace ("main 24 nb-files="); eputs (itoa (s->nb_files)); eputs ("\n");
+        trace ("main 24 n="); eputs (itoa (n)); eputs ("\n");
         struct filespec *f = s->files[s->nb_files - n];
+        trace ("for f->name="); eputs (f->name); eputs ("\n");
         s->filetype = f->type;
         s->alacarte_link = f->alacarte;
         if (f->type == AFF_TYPE_LIB) {
             if (tcc_add_library_err(s, f->name) < 0)
                 ret = 1;
+            trace ("main 32 ret="); eputs (itoa (ret)); eputs ("\n");
         } else {
             if (1 == s->verbose)
                 printf("-> %s\n", f->name);
@@ -325,7 +348,9 @@ redo:
                 first_file = f->name;
             if (tcc_add_file(s, f->name) < 0)
                 ret = 1;
+            trace ("main 33 ret="); eputs (itoa (ret)); eputs ("\n");
         }
+        trace ("ret="); eputs (itoa (ret)); eputs ("\n");
         s->filetype = 0;
         s->alacarte_link = 1;
         if (ret || --n == 0
@@ -333,17 +358,24 @@ redo:
             break;
     }
 
+    trace ("main 40\n");
+
     if (s->output_type == TCC_OUTPUT_PREPROCESS) {
+        trace ("main 41\n");
         if (s->outfile)
             fclose(s->ppfp);
     } else if (0 == ret) {
+        trace ("main 42 ret == 0\n");
         if (s->output_type == TCC_OUTPUT_MEMORY) {
+            trace ("main RUN\n");
 #ifdef TCC_IS_NATIVE
             ret = tcc_run(s, argc, argv);
 #endif
         } else {
+            trace ("main 44 gonna output_file\n");
             if (!s->outfile)
                 s->outfile = default_outputfile(s, first_file);
+            trace ("main 45 output_file\n");
             if (tcc_output_file(s, s->outfile))
                 ret = 1;
             else if (s->gen_deps)
@@ -356,5 +388,6 @@ redo:
     tcc_delete(s);
     if (ret == 0 && n)
         goto redo; /* compile more files with -c */
+    trace_exit ("main");
     return ret;
 }

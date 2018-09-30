@@ -225,12 +225,20 @@ void o(uint32_t i)
   if (ind1 > cur_text_section->data_allocated)
     section_realloc(cur_text_section, ind1);
   cur_text_section->data[ind++] = i&255;
+  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
+  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i&255;
+  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
+  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i&255;
+  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
+  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i;
+  trace ("o "); eputs (itoa (i)); eputs ("\n");
+  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
 }
 
 static uint32_t stuff_const(uint32_t op, uint32_t c)
