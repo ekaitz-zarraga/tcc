@@ -695,6 +695,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     int rex64;
 #endif
 
+    trace_enter ("asm_opcode");
     maybe_print_stats();
     /* force synthetic ';' after prefix instruction, so we can handle */
     /* one-line things like "rep stosb" instead of only "rep\nstosb" */
@@ -707,6 +708,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     seg_prefix = 0;
     alltypes = 0;
     for(;;) {
+        trace ("asm_opcode 10 tok="); eputc (tok); eputs (" ["); eputs (itoa (tok)); eputs ("]\n");
         if (tok == ';' || tok == TOK_LINEFEED)
             break;
         if (nb_ops >= MAX_OPERANDS) {
@@ -714,6 +716,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         }
         parse_operand(s1, pop);
         if (tok == ':') {
+           trace ("tcc_assemble_internal 15\n");
            if (pop->type != OP_SEG || seg_prefix)
                tcc_error("incorrect prefix");
            seg_prefix = segment_prefixes[pop->reg];
@@ -727,6 +730,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         nb_ops++;
         if (tok != ',')
             break;
+        trace ("tcc_assemble_internal 28\n");
         next();
     }
 
@@ -736,6 +740,9 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
        !) */
     for(pa = asm_instrs; pa->sym != 0; pa++) {
 	int it = pa->instr_type & OPCT_MASK;
+        trace ("asm_opcode 30 pa->instr_type="); eputs (itoa (pa->instr_type)); eputs ("\n");
+        trace ("asm_opcode 30 OPCT_MASK="); eputs (itoa (OPCT_MASK)); eputs ("\n");
+        trace ("asm_opcode 30 it="); eputs (itoa (it)); eputs ("\n");
         s = 0;
         if (it == OPC_FARITH) {
             v = opcode - pa->sym;
@@ -837,6 +844,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         break;
     next: ;
     }
+    trace ("tcc_assemble_internal 80\n");
     if (pa->sym == 0) {
         if (opcode >= TOK_ASM_first && opcode <= TOK_ASM_last) {
             int b;
@@ -844,6 +852,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
             if (b & 0xff00) 
                 g(b >> 8);
             g(b);
+            trace_exit ("asm_opcode");
             return;
         } else if (opcode <= TOK_ASM_alllast) {
             tcc_error("bad operand with opcode '%s'",
@@ -853,6 +862,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
                   get_tok_str(opcode, NULL));
         }
     }
+    trace ("tcc_assemble_internal 90\n");
     /* if the size is unknown, then evaluate it (OPC_B or OPC_WL case) */
     autosize = NBWLX-1;
 #ifdef TCC_TARGET_X86_64
@@ -882,6 +892,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         }
     }
 
+    trace ("tcc_assemble_internal 100\n");
 #ifdef TCC_TARGET_X86_64
     /* Generate addr32 prefix if needed */
     for(i = 0; i < nb_ops; i++) {
@@ -904,6 +915,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
 	        && ops[i].type & OP_SSE)
 	        p66 = 1;
     }
+    trace ("tcc_assemble_internal 120\n");
     if (p66)
         g(0x66);
 #ifdef TCC_TARGET_X86_64
@@ -933,12 +945,14 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     }
 #endif
 
+    trace ("tcc_assemble_internal 130\n");
     /* now generates the operation */
     if (OPCT_IS(pa->instr_type, OPC_FWAIT))
         g(0x9b);
     if (seg_prefix)
         g(seg_prefix);
 
+    trace ("tcc_assemble_internal 135\n");
     v = pa->opcode;
     if (pa->instr_type & OPC_0F)
         v = ((v & ~0xff) << 8) | 0x0f00 | (v & 0xff);
@@ -966,6 +980,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         v += ((opcode - pa->sym) / 6) << 3;
     }
 
+    trace ("tcc_assemble_internal 150\n");
     /* search which operand will be used for modrm */
     modrm_index = -1;
     modreg_index = -1;
@@ -1009,6 +1024,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     asm_rex (rex64, ops, nb_ops, op_type, modreg_index, modrm_index);
 #endif
 
+    trace ("tcc_assemble_internal 160\n");
     if (pa->instr_type & OPC_REG) {
         /* mov $im, %reg case */
         if (v == 0xb0 && s >= 1)
@@ -1020,6 +1036,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
             }
         }
     }
+    trace ("tcc_assemble_internal 170\n");
     if (pa->instr_type & OPC_B)
         v += s >= 1;
     if (nb_ops == 1 && pa->op_type[0] == OPT_DISP8) {
@@ -1050,6 +1067,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
 	        tcc_error("invalid displacement");
         }
     }
+    trace ("tcc_assemble_internal 180\n");
     if (OPCT_IS(pa->instr_type, OPC_TEST))
         v += test_bits[opcode - pa->sym];
     op1 = v >> 16;
@@ -1090,6 +1108,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
         if (ops[0].e.sym)
             tcc_error("cannot relocate");
         gen_le16(ops[0].e.v);
+        trace_exit ("asm_opcode");
         return;
     }
 #endif
@@ -1131,6 +1150,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int opcode)
     /* after immediate operands, adjust pc-relative address */
     if (pc)
         add32le(cur_text_section->data + pc - 4, pc - ind);
+    trace_exit ("asm_opcode");
 }
 
 /* return the constraint priority (we allocate first the lowest
@@ -1594,6 +1614,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
     ASMOperand *op;
     int i, reg;
 
+    trace_enter ("asm_gen_code");
     /* Strictly speaking %Xbp and %Xsp should be included in the
        call-preserved registers, but currently it doesn't matter.  */
 #ifdef TCC_TARGET_X86_64
@@ -1687,6 +1708,7 @@ ST_FUNC void asm_gen_code(ASMOperand *operands, int nb_operands,
             }
         }
     }
+    trace_exit ("asm_gen_code");
 }
 
 ST_FUNC void asm_clobber(uint8_t *clobber_regs, const char *str)

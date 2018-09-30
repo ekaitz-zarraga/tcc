@@ -226,10 +226,14 @@ PUB_FUNC void *tcc_mallocz(unsigned long size)
 
 PUB_FUNC void *tcc_realloc(void *ptr, unsigned long size)
 {
+    trace_enter ("tcc_realloc");
+    trace ("tcc_realloc size="); eputs (itoa (size)); eputs ("\n");
+
     void *ptr1;
     ptr1 = realloc(ptr, size);
     if (!ptr1 && size)
         tcc_error("memory full (realloc)");
+    trace_exit ("tcc_realloc");
     return ptr1;
 }
 
@@ -414,11 +418,15 @@ ST_FUNC void dynarray_add(void *ptab, int *nb_ptr, void *data)
     nb = *nb_ptr;
     pp = *(void ***)ptab;
     /* every power of two we double array size */
+    trace ("dynarray_add nb="); eputs (itoa (nb)); eputs ("\n");
+    trace ("dynarray_add (nb & (nb - 1)) = "); eputs (itoa (nb & (nb - 1))); eputs ("\n");
     if ((nb & (nb - 1)) == 0) {
+        eputs ("dynarray_add 10\n");
         if (!nb)
             nb_alloc = 1;
         else
             nb_alloc = nb * 2;
+        trace ("dynarray_add nb_alloc="); eputs (itoa (nb_alloc)); eputs ("\n");
         pp = tcc_realloc(pp, nb_alloc * sizeof(void *));
         *(void***)ptab = pp;
     }
@@ -439,11 +447,17 @@ ST_FUNC void dynarray_reset(void *pp, int *n)
 static void tcc_split_path(TCCState *s, void *p_ary, int *p_nb_ary, const char *in)
 {
     const char *p;
+    //eputs ("sp in="); //eputs (in); //eputs ("\n");
     do {
         int c;
         CString str;
+        //eputs ("sp in="); //eputs (in); //eputs ("\n");
+        //if (s->nb_files) {struct filespec *f = s->files[0]; //eputs ("sp 01 file[0]="); //eputs (f->name); //eputs ("\n");}
+
 
         cstr_new(&str);
+        //if (s->nb_files) {struct filespec *f = s->files[0]; //eputs ("sp 02 file[0]="); //eputs (f->name); //eputs ("\n");}
+
         for (p = in; c = *p, c != '\0' && c != PATHSEP; ++p) {
             if (c == '{' && p[1] && p[2] == '}') {
                 c = p[1], p += 2;
@@ -455,11 +469,15 @@ static void tcc_split_path(TCCState *s, void *p_ary, int *p_nb_ary, const char *
         }
         if (str.size) {
             cstr_ccat(&str, '\0');
+            //if (s->nb_files) {struct filespec *f = s->files[0]; //eputs ("sp 14 file[0]="); //eputs (f->name); //eputs ("\n");}
             dynarray_add(p_ary, p_nb_ary, tcc_strdup(str.data));
         }
+            //if (s->nb_files) {struct filespec *f = s->files[0]; //eputs ("sp 15 file[0]="); //eputs (f->name); //eputs ("\n");}
         cstr_free(&str);
+        //if (s->nb_files) {struct filespec *f = s->files[0]; //eputs ("sp 16 file[0]="); //eputs (f->name); //eputs ("\n");}
         in = p+1;
     } while (*p);
+    //eputs ("sp 99\n");
 }
 
 /********************************************************/
@@ -575,51 +593,77 @@ PUB_FUNC void tcc_warning(const char *fmt, ...)
 
 ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
 {
+    trace_enter ("tcc_open_bf");
     BufferedFile *bf;
     int buflen = initlen ? initlen : IO_BUF_SIZE;
 
     bf = tcc_mallocz(sizeof(BufferedFile) + buflen);
+    trace ("tcc_open_bf buflen="); eputs (itoa (buflen)); eputs ("\n");
+    //eputs ("tcc_open_bf bf size="); //eputs (itoa (sizeof (BufferedFile) + buflen)); //eputs ("\n");
+
+    trace ("tcc_open_bf 10\n");
     bf->buf_ptr = bf->buffer;
+    trace ("tcc_open_bf 11\n");
     bf->buf_end = bf->buffer + initlen;
+    trace ("tcc_open_bf 12\n");
     bf->buf_end[0] = CH_EOB; /* put eob symbol */
+    trace ("tcc_open_bf 13\n");
     pstrcpy(bf->filename, sizeof(bf->filename), filename);
+    trace ("tcc_open_bf 14\n");
     pstrcpy(bf->filename2, sizeof(bf->filename2), filename);
+    trace ("tcc_open_bf 15\n");
 #ifdef _WIN32
     normalize_slashes(bf->filename);
 #endif
+    trace ("tcc_open_bf 20\n");
     bf->line_num = 1;
     bf->ifdef_stack_ptr = s1->ifdef_stack_ptr;
     bf->fd = -1;
     bf->prev = file;
     file = bf;
+    trace_exit ("tcc_open_bf");
 }
 
 ST_FUNC void tcc_close(void)
 {
+    trace_enter ("tcc_close");
     BufferedFile *bf = file;
+    //eputs ("tcc_close file:"); //eputs (itoa (file)); //eputs ("\n");
+    //eputs ("tcc_close bf->fd:"); //eputs (itoa (bf->fd)); //eputs ("\n");
+    //eputs ("tcc_close bf->prev:"); //eputs (itoa (bf->prev)); //eputs ("\n");
     if (bf->fd > 0) {
+        //eputs ("tcc_close bf->filename:"); //eputs (bf->filename); //eputs ("\n");
         close(bf->fd);
         total_lines += bf->line_num;
     }
+    //trace ("tcc_close file->buf_ptr="); eputs (file->buf_ptr); eputs ("\n");
     file = bf->prev;
     tcc_free(bf);
+    trace_exit ("tcc_close");
 }
 
 ST_FUNC int tcc_open(TCCState *s1, const char *filename)
 {
     int fd;
+    trace_enter ("tcc_open");
+    trace ("tcc_open file-name="); eputs (filename); eputs ("\n");
     if (strcmp(filename, "-") == 0)
         fd = 0, filename = "<stdin>";
     else
         fd = open(filename, O_RDONLY | O_BINARY);
+    trace ("tcc_open fd="); eputs (itoa (fd)); eputs ("\n");
     if ((s1->verbose == 2 && fd >= 0) || s1->verbose == 3)
         printf("%s %*s%s\n", fd < 0 ? "nf":"->",
                (int)(s1->include_stack_ptr - s1->include_stack), "", filename);
-    if (fd < 0)
+    if (fd < 0) {
+        trace_exit ("tcc_open");
         return -1;
-
+    }
+    eputs ("tcc_open 10\n");
     tcc_open_bf(s1, filename, 0);
+    eputs ("tcc_open 11\n");
     file->fd = fd;
+    trace_exit ("tcc_open");
     return fd;
 }
 
@@ -628,6 +672,7 @@ static int tcc_compile(TCCState *s1)
 {
     Sym *define_start;
 
+    trace_enter ("tcc_compile");
     define_start = define_stack;
 #if HAVE_SETJMP
     if (setjmp(s1->error_jmp_buf) == 0) {
@@ -637,25 +682,36 @@ static int tcc_compile(TCCState *s1)
         s1->nb_errors = 0;
         s1->error_set_jmp_enabled = 1;
 
+        trace ("tcc_compile 05 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         preprocess_start(s1);
+        trace ("tcc_compile 06 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
+
         tccgen_start(s1);
+        trace ("tcc_compile 07 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
 
 #ifdef INC_DEBUG
         printf("%s: **** new file\n", file->filename);
 #endif
 
         ch = file->buf_ptr[0];
+        trace ("tcc_compile 08 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         tok_flags = TOK_FLAG_BOL | TOK_FLAG_BOF;
         parse_flags = PARSE_FLAG_PREPROCESS | PARSE_FLAG_TOK_NUM | PARSE_FLAG_TOK_STR;
+        trace ("tcc_compile 10 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         next();
+        trace ("tcc_compile 11 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         decl(VT_CONST);
+        trace ("tcc_compile 12 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         if (tok != TOK_EOF)
             expect("declaration");
         /* free defines here already on behalf of of M.M.'s possibly existing
            experimental preprocessor implementation. The normal call below
            is still there to free after error-longjmp */
+        trace ("tcc_compile 13 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         free_defines(define_start);
+        trace ("tcc_compile 14 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
         tccgen_end(s1);
+        trace ("tcc_compile 15 nb_errors="); eputs  (itoa (s1->nb_errors)); eputs  ("\n");
     }
     s1->error_set_jmp_enabled = 0;
 
@@ -664,6 +720,7 @@ static int tcc_compile(TCCState *s1)
     free_defines(define_start);
     sym_pop(&global_stack, NULL, 0);
     sym_pop(&local_stack, NULL, 0);
+    trace_exit ("tcc_compile");
     return s1->nb_errors != 0 ? -1 : 0;
 }
 
@@ -682,25 +739,37 @@ LIBTCCAPI int tcc_compile_string(TCCState *s, const char *str)
 /* define a preprocessor symbol. A value can also be provided with the '=' operator */
 LIBTCCAPI void tcc_define_symbol(TCCState *s1, const char *sym, const char *value)
 {
+    trace_enter ("tcc_define_symbol");
+    trace ("tcc_define_symbol value="); eputs (sym); eputs ("\n");
+
     int len1, len2;
     /* default value */
     if (!value)
         value = "1";
+    trace ("tcc_define_symbol 01\n");
     len1 = strlen(sym);
+    trace ("tcc_define_symbol 02\n");
     len2 = strlen(value);
+    trace ("tcc_define_symbol 03\n");
 
     /* init file structure */
     tcc_open_bf(s1, "<define>", len1 + len2 + 1);
+    trace ("tcc_define_symbol 04\n");
     memcpy(file->buffer, sym, len1);
     file->buffer[len1] = ' ';
     memcpy(file->buffer + len1 + 1, value, len2);
 
+    trace ("tcc_define_symbol X="); //eputs (file->buffer); //eputs ("\n");
     /* parse with define parser */
     ch = file->buf_ptr[0];
+    trace ("tcc_define_symbol 08\n");
     next_nomacro();
+    trace ("tcc_define_symbol 09\n");
     parse_define();
+    trace ("tcc_define_symbol 10\n");
 
     tcc_close();
+    trace_exit ("tcc_define_symbol");
 }
 
 /* undefine a preprocessor symbol */
@@ -718,12 +787,15 @@ LIBTCCAPI void tcc_undefine_symbol(TCCState *s1, const char *sym)
 /* cleanup all static data used during compilation */
 static void tcc_cleanup(void)
 {
+
     if (NULL == tcc_state)
         return;
     tccpp_delete(tcc_state);
+    //eputs ("tcc_cleanup01\n");
     tcc_state = NULL;
     /* free sym_pools */
     dynarray_reset(&sym_pools, &nb_sym_pools);
+    //eputs ("tcc_cleanup02\n");
     /* reset symbol stack */
     sym_free_first = NULL;
 }
@@ -732,9 +804,15 @@ LIBTCCAPI TCCState *tcc_new(void)
 {
     TCCState *s;
 
+    //eputs ("tcc_new\n");
     tcc_cleanup();
+    //eputs ("tcc_new01\n");
 
     s = tcc_mallocz(sizeof(TCCState));
+    //eputs ("size:"); //eputs (itoa (sizeof(TCCState))); //eputs ("\n");
+    //eputs ("tcc_new02\n");
+    //eputs ("s="); //eputs (itoa (s)); //eputs ("\n");
+
     if (!s)
         return NULL;
     tcc_state = s;
@@ -896,6 +974,8 @@ LIBTCCAPI TCCState *tcc_new(void)
     /* Some GCC builtins that are simple to express as macros.  */
     tcc_define_symbol(s, "__builtin_extract_return_addr(x)", "x");
 #endif /* ndef TCC_TARGET_PE */
+    //eputs ("tcc_new99\n");
+
     return s;
 }
 
@@ -1001,10 +1081,30 @@ LIBTCCAPI int tcc_add_sysinclude_path(TCCState *s, const char *pathname)
     return 0;
 }
 
+#if !BOOTSTRAP // MESC
+#define for_each_elem(sec, startoff, elem, type) \
+    for (elem = (type *) sec->data + startoff; \
+         elem < (type *) (sec->data + sec->data_offset); elem++)
+#else
+#define for_each_elem(sec, startoff, elem, type) \
+  elem = sec->data + sizeof (type) * startoff; \
+  for (;elem < ((type *) (sec->data + sec->data_offset)); elem++)
+#endif
+
 ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 {
     int ret, filetype;
 
+    trace_enter ("tcc_add_file_internal");
+    char *name;
+    ElfW(Sym) *esym;
+    for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
+      trace ("tcc_add_file_internal num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      name = (char *) strtab_section->data + esym->st_name;
+      trace ("tcc_add_file_internal name="); eputs (name); eputs ("\n");
+    }
+
+    trace ("tcc_add_file_internal file-name="); eputs (filename); eputs ("\n");
     filetype = flags & 0x0F;
     if (filetype == 0) {
         /* use a file extension to detect a filetype */
@@ -1025,16 +1125,34 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
     }
 
     /* open the file */
+    trace ("tcc_add_file_internal filename="); eputs (filename); eputs ("\n");
     ret = tcc_open(s1, filename);
+    trace ("tcc_add_file_internal 20 ret="); eputs (itoa (ret));; eputs  ("\n");
+
+    for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
+      trace ("tcc_add_file_internal num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      name = (char *) strtab_section->data + esym->st_name;
+      trace ("tcc_add_file_internal name="); eputs (name); eputs ("\n");
+    }
+
     if (ret < 0) {
         if (flags & AFF_PRINT_ERROR)
             tcc_error_noabort("file '%s' not found", filename);
+        trace_exit ("tcc_add_file_internal");
         return ret;
     }
 
     /* update target deps */
     dynarray_add(&s1->target_deps, &s1->nb_target_deps,
             tcc_strdup(filename));
+    trace ("nb_target_deps ="); eputs (itoa (s1->nb_target_deps)); eputs ("\n");
+
+    trace ("tcc_add_file_internal 21\n");
+    for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
+      trace ("tcc_add_file_internal num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      name = (char *) strtab_section->data + esym->st_name;
+      trace ("tcc_add_file_internal name="); eputs (name); eputs ("\n");
+    }
 
     parse_flags = 0;
     /* if .S file, define __ASSEMBLER__ like gcc does */
@@ -1043,25 +1161,43 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
         parse_flags = PARSE_FLAG_ASM_FILE;
     }
 
+    trace ("tcc_add_file_internal 22\n");
+    for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
+     trace ("tcc_add_file_internal num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+     name = (char *) strtab_section->data + esym->st_name;
+     trace ("tcc_add_file_internal name="); eputs (name); eputs ("\n");
+    }
+
     if (flags & AFF_PREPROCESS) {
         ret = tcc_preprocess(s1);
+        trace ("tcc_add_file_internal 31 ret="); eputs (itoa (ret));; eputs  ("\n");
     } else if (filetype == AFF_TYPE_C) {
         ret = tcc_compile(s1);
+        trace ("tcc_add_file_internal 32 ret="); eputs (itoa (ret));; eputs  ("\n");
+        for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
+          trace ("tcc_add_file_internal num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+          name = (char *) strtab_section->data + esym->st_name;
+          trace ("tcc_add_file_internal name="); eputs (name); eputs ("\n");
+        }
 #ifdef CONFIG_TCC_ASM
     } else if (filetype == AFF_TYPE_ASMPP) {
         /* non preprocessed assembler */
         ret = tcc_assemble(s1, 1);
+        trace ("tcc_add_file_internal 33 ret="); eputs (itoa (ret));; eputs  ("\n");
     } else if (filetype == AFF_TYPE_ASM) {
         /* preprocessed assembler */
         ret = tcc_assemble(s1, 0);
 #endif
+        trace ("tcc_add_file_internal 34 ret="); eputs (itoa (ret));; eputs  ("\n");
     } else {
         ElfW(Ehdr) ehdr;
         int fd, obj_type;
 
         fd = file->fd;
         obj_type = tcc_object_type(fd, &ehdr);
+        trace ("tcc_add_file_internal 36 obj_type="); eputs (itoa (obj_type)); eputs  ("\n");
         lseek(fd, 0, SEEK_SET);
+        trace ("tcc_add_file_internal 37\n");
 
         /* do not display line number if error */
         file->line_num = 0;
@@ -1073,43 +1209,60 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 
         switch (obj_type) {
         case AFF_BINTYPE_REL:
+            {
             ret = tcc_load_object_file(s1, fd, 0);
+            trace ("tcc_add_file_internal 41 ret="); eputs (itoa (ret));; eputs  ("\n");
             break;
+            }
 #ifndef TCC_TARGET_PE
         case AFF_BINTYPE_DYN:
+            {
             if (s1->output_type == TCC_OUTPUT_MEMORY) {
                 ret = 0;
 #ifdef TCC_IS_NATIVE
                 if (NULL == dlopen(filename, RTLD_GLOBAL | RTLD_LAZY))
                     ret = -1;
 #endif
+                trace ("tcc_add_file_internal 42 ret="); eputs (itoa (ret));; eputs  ("\n");
             } else {
                 ret = tcc_load_dll(s1, fd, filename,
                                    (flags & AFF_REFERENCED_DLL) != 0);
+                trace ("tcc_add_file_internal 43 ret="); eputs (itoa (ret));; eputs  ("\n");
             }
             break;
 #endif
+            }
         case AFF_BINTYPE_AR:
+            {
             ret = tcc_load_archive(s1, fd);
+            trace ("tcc_add_file_internal 51 ret="); eputs (itoa (ret));; eputs  ("\n");
             break;
+            }
 #ifdef TCC_TARGET_COFF
         case AFF_BINTYPE_C67:
             ret = tcc_load_coff(s1, fd);
+            trace ("tcc_add_file_internal 52 ret="); eputs (itoa (ret));; eputs  ("\n");
             break;
 #endif
         default:
+            {
 #ifdef TCC_TARGET_PE
             ret = pe_load_file(s1, filename, fd);
 #else
             /* as GNU ld, consider it is an ld script if not recognized */
             ret = tcc_load_ldscript(s1);
+            trace ("tcc_add_file_internal 61 ret="); eputs (itoa (ret));; eputs  ("\n");
 #endif
             if (ret < 0)
                 tcc_error_noabort("unrecognized file type");
             break;
+            }
         }
     }
+
+    trace ("tcc_add_file_internal 90\n");
     tcc_close();
+    trace_exit ("tcc_add_file_internal");
     return ret;
 }
 
@@ -1123,7 +1276,11 @@ LIBTCCAPI int tcc_add_file(TCCState *s, const char *filename)
 
 LIBTCCAPI int tcc_add_library_path(TCCState *s, const char *pathname)
 {
+    trace ("tcc_add_library_path path="); eputs (pathname); eputs ("\n");
     tcc_split_path(s, &s->library_paths, &s->nb_library_paths, pathname);
+    for(int i = 0; i < s->nb_library_paths; i++) {
+        trace ("tcc_add_library_path dir="); eputs (s->library_paths[i]); eputs ("\n");
+    }
     return 0;
 }
 
@@ -1133,8 +1290,11 @@ static int tcc_add_library_internal(TCCState *s, const char *fmt,
     char buf[1024];
     int i;
 
+    trace ("tcc_add_library_internal file-name="); eputs (filename); eputs ("\n");
+    trace ("tcc_add_library_internal nb_paths="); eputs (itoa (nb_paths)); eputs ("\n");
     for(i = 0; i < nb_paths; i++) {
         snprintf(buf, sizeof(buf), fmt, paths[i], filename);
+        trace ("tcc_add_library_internal buf="); eputs (buf); eputs ("\n");
         if (tcc_add_file_internal(s, buf, flags | AFF_TYPE_BIN) == 0)
             return 0;
     }
@@ -1151,6 +1311,7 @@ ST_FUNC int tcc_add_dll(TCCState *s, const char *filename, int flags)
 
 ST_FUNC int tcc_add_crt(TCCState *s, const char *filename)
 {
+    trace ("tcc_add_crt file name="); eputs (filename); eputs ("\n");
     if (-1 == tcc_add_library_internal(s, "%s/%s",
         filename, 0, s->crt_paths, s->nb_crt_paths))
         tcc_error_noabort("file '%s' not found", filename);
@@ -1181,6 +1342,7 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 
 PUB_FUNC int tcc_add_library_err(TCCState *s, const char *libname)
 {
+    trace ("tcc_add_library_err libname="); eputs (libname); eputs ("\n");
     int ret = tcc_add_library(s, libname);
     if (ret < 0)
         tcc_error_noabort("library '%s' not found", libname);
@@ -1202,6 +1364,7 @@ LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val)
        So it is handled here as if it were in a DLL. */
     pe_putimport(s, 0, name, (uintptr_t)val);
 #else
+    trace ("tcc_add_symbol name="); eputs (name); eputs ("\n");
     set_elf_sym(symtab_section, (uintptr_t)val, 0,
         ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE), 0,
         SHN_ABS, name);
@@ -1266,10 +1429,13 @@ ST_FUNC int set_flag(TCCState *s, const FlagDef *flags, const char *name)
 
 static int strstart(const char *val, const char **str)
 {
+    //eputs ("strstart val:"); //eputs (val); //eputs ("\n");
+    //eputs ("strstart *str:"); //eputs (*str); //eputs ("\n");
     const char *p, *q;
     p = *str;
     q = val;
     while (*q) {
+        //eputs ("*q:"); //eputc (*q); //eputs ("\n");
         if (*p != *q)
             return 0;
         p++;
@@ -1624,10 +1790,16 @@ static void parse_option_D(TCCState *s1, const char *optarg)
 static void args_parser_add_file(TCCState *s, const char* filename, int filetype)
 {
     struct filespec *f = tcc_malloc(sizeof *f + strlen(filename));
+    trace ("arg_parser_add file name="); eputs (filename); eputs ("\n");
     f->type = filetype;
     f->alacarte = s->alacarte_link;
     strcpy(f->name, filename);
+    trace ("arg_parser_add file f->name="); //eputs (f->name); //eputs ("\n");
+    trace ("arg_parser_add nb_files="); //eputs (itoa (s->nb_files)); //eputs ("\n");
     dynarray_add(&s->files, &s->nb_files, f);
+    //struct filespec *= s->files[s->nb_files - 1];
+    struct filespec * fs = s->files[0];
+    //eputs ("arg_parser_add file fs->name="); //eputs (fs->name); //eputs ("\n");
 }
 
 static int args_parser_make_argv(const char *r, int *argc, char ***argv)
@@ -1672,6 +1844,7 @@ static void args_parser_listfile(TCCState *s,
     int argc = 0;
     char **argv = NULL;
 
+    trace ("arg_parser_listfile filename="); eputs (filename); eputs ("\n");
     fd = open(filename, O_RDONLY | O_BINARY);
     if (fd < 0)
         tcc_error("listfile '%s' not found", filename);
@@ -1693,21 +1866,35 @@ static void args_parser_listfile(TCCState *s,
 
 PUB_FUNC int tcc_parse_args(TCCState *s, int *pargc, char ***pargv, int optind)
 {
+    trace ("tcc_parse_args\n");
+
     const TCCOption *popt;
     const char *optarg, *r;
     const char *run = NULL;
     int last_o = -1;
     int x;
+    trace ("tcc_parse_args 005\n");
     CString linker_arg; /* collect -Wl options */
+    trace ("tcc_parse_args 006\n");
     char buf[1024];
+    trace ("tcc_parse_args 007\n");
     int tool = 0, arg_start = 0, noaction = optind;
+    trace ("tcc_parse_args 008\n");
     char **argv = *pargv;
+    trace ("tcc_parse_args 009\n");
     int argc = *pargc;
+
+    trace ("tcc_parse_args 01 argc:"); eputs (itoa (argc)); eputs ("\n");
 
     cstr_new(&linker_arg);
 
+    trace ("tcc_parse_args 01 optind:"); eputs (itoa (optind)); eputs ("\n");
     while (optind < argc) {
+        trace ("tcc_parse_args 02 arg:"); eputs (itoa (optind)); eputs ("\n");
+
         r = argv[optind];
+        trace ("tcc_parse_args 03 r:"); eputs (r); eputs ("\n");
+
         if (r[0] == '@' && r[1] != '\0') {
             args_parser_listfile(s, r + 1, optind, &argc, &argv);
 	    continue;
@@ -1730,10 +1917,17 @@ reparse:
             continue;
         }
 
+        trace ("tcc_parse_args 20\n");
+
+        trace ("tcc_parse_args 20 opt0="); eputs (tcc_options[0].name); eputs ("\n");
+        trace ("tcc_parse_args 20 opt1="); eputs (tcc_options[1].name); eputs ("\n");
         /* find option in table */
         for(popt = tcc_options; ; ++popt) {
+            trace ("tcc_parse_args 21\n");
+            trace ("tcc_parse_args 22 popt:"); eputs (popt->name); eputs ("\n");
             const char *p1 = popt->name;
             const char *r1 = r + 1;
+            trace ("tcc_parse_args 23 r1:"); eputs (r1); eputs ("\n");
             if (p1 == NULL)
                 tcc_error("invalid option -- '%s'", r);
             if (!strstart(p1, &r1))
@@ -1750,6 +1944,8 @@ reparse:
                 continue;
             break;
         }
+
+        trace ("pars_arg 2\n");
 
         switch(popt->index) {
         case TCC_OPTION_HELP:
