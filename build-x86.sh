@@ -11,10 +11,10 @@ PREFIX=${PREFIX-usr}
 GUIX=${GUIX-$(command -v guix||:)}
 MES_PREFIX=${MES_PREFIX-../mes}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}/../share/mes}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
-cp $TINYCC_SEED/x86-mes-gcc/crt1.o crt1.o
-cp $TINYCC_SEED/x86-mes-gcc/crti.o crti.o
-cp $TINYCC_SEED/x86-mes-gcc/crtn.o crtn.o
+MES_SEED=${MES_SEED-../mes-seed}
+cp $MES_SEED/x86-mes-gcc/crt1.o crt1.o
+cp $MES_SEED/x86-mes-gcc/crti.o crti.o
+cp $MES_SEED/x86-mes-gcc/crtn.o crtn.o
 
 CC=${CC-i686-unknown-linux-gnu-gcc}
 CFLAGS="
@@ -38,8 +38,8 @@ export interpreter
 
 mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
-cp $TINYCC_SEED/x86-mes-gcc/libc+tcc.o $ABSPREFIX/lib
-cp $TINYCC_SEED/x86-mes-gcc/libtcc1.o $ABSPREFIX/lib
+cp $MES_SEED/x86-mes-gcc/libc+tcc.o $ABSPREFIX/lib
+cp $MES_SEED/x86-mes-gcc/libtcc1.o $ABSPREFIX/lib
 $CC -g -o i686-unknown-linux-gnu-tcc\
    $CFLAGS\
    -I.\

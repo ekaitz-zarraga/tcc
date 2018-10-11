@@ -6,7 +6,7 @@ TCC=${TCC-./mes-tcc}
 MESCC=${MESCC-mescc}
 MES_PREFIX=${MES_PREFIX-../mes}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
+MES_SEED=${MES_SEED-../mes-seed}
 OBJDUMP=${OBJDUMP-objdump}
 DIFF=${DIFF-diff}
 
@@ -36,7 +36,7 @@ if [ -x ./i686-unknown-linux-gnu-tcc ]; then
         -static\
         -o "$b".mes-gcc-out\
         -L .\
-        -L $TINYCC_SEED\
+        -L $MES_SEED\
         "$b".mes-gcc-o &> 1.link
     set +e
     "$b".mes-gcc-out arg1 arg2 arg3 arg4 arg5 > "$b".mes-gcc-stdout
@@ -69,7 +69,7 @@ $TCC\
     -I $MES_PREFIX/include\
     -I $MES_PREFIX/scaffold/tests\
     -I $MES_PREFIX/scaffold/tinycc\
-    -L $TINYCC_SEED\
+    -L $MES_SEED\
     "$t".c &> 2.link
 set +e
 "$b".mes-out arg1 arg2 arg3 arg4 arg5 > "$b".mes-stdout

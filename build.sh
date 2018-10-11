@@ -6,7 +6,7 @@ export BUILD_DEBUG
 export MES_DEBUG
 export MES_PREFIX
 export PREFIX
-export TINYCC_SEED
+export MES_SEED
 export interpreter
 
 if [ -n "$BUILD_DEBUG" ]; then
@@ -29,10 +29,9 @@ BLOOD_ELF=${BLOOD_ELF-blood-elf}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}/../share/mes}
 #MES_PREFIX=${MES_PREFIX-../mes}
 MES_SEED=${MES_SEED-../mes-seed}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
-cp $TINYCC_SEED/x86-mes-tcc/crt1.o crt1.o
-cp $TINYCC_SEED/x86-mes-tcc/crti.o crti.o
-cp $TINYCC_SEED/x86-mes-tcc/crtn.o crtn.o
+cp $MES_SEED/x86-mes-gcc/crt1.o crt1.o
+cp $MES_SEED/x86-mes-gcc/crti.o crti.o
+cp $MES_SEED/x86-mes-gcc/crtn.o crtn.o
 
 if [ -z "$interpreter" -a -n "$GUIX" ]; then
     interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
@@ -45,7 +44,7 @@ export interpreter
 
 mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
-cp $TINYCC_SEED/x86-mes-tcc/libc+tcc.o $ABSPREFIX/lib
+cp $MES_SEED/x86-mes-gcc/libc+tcc.o $ABSPREFIX/lib
 
 
 if [ -n "$ONE_SOURCE" ]; then
@@ -80,11 +79,10 @@ $MESCC\
     $MESCCFLAGS\
     -g\
     -o mes-tcc\
-    -L $TINYCC_SEED\
     -L $MES_SEED\
     -l c+tcc\
     $files\
-    $TINYCC_SEED/x86-mes/libc+tcc.o
+    $MES_SEED/x86-mes/libc+tcc.o
 
 rm -f libc.a
 if false; then
@@ -93,12 +91,12 @@ if false; then
     ./mes-tcc -c -I $MES_PREFIX/include -I $MES_PREFIX/lib $MES_PREFIX/lib/libc+gnu.c
     ./mes-tcc -ar rc libc.a libc+gnu.o
 else
-    ##./mes-tcc -ar rc libc.a $TINYCC_SEED/x86-mes-tcc/libc+gnu.o
-    cp -f $TINYCC_SEED/x86-mes-gcc/libc+gnu.o .
+    ##./mes-tcc -ar rc libc.a $MES_SEED/x86-mes-gcc/libc+gnu.o
+    cp -f $MES_SEED/x86-mes-gcc/libc+gnu.o .
     ./mes-tcc -ar rc libc.a libc+gnu.o
 fi
 rm -f libtcc1.a
-cp -f $TINYCC_SEED/x86-mes-gcc/libtcc1.o .
+cp -f $MES_SEED/x86-mes-gcc/libtcc1.o .
 ./mes-tcc -ar rc libtcc1.a libtcc1.o
 
 sh boot.sh

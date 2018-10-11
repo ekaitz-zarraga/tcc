@@ -8,7 +8,7 @@ set -e
 
 PREFIX=${PREFIX-usr}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
+MES_SEED=${MES_SEED-../mes-seed}
 
 mkdir -p $PREFIX/bin
 cp tcc $PREFIX/bin
@@ -23,4 +23,6 @@ mkdir -p $PREFIX/lib/tcc
 cp libc.a $PREFIX/lib
 cp libtcc1.a $PREFIX/lib/tcc
 
-tar -C $TINYCC_SEED -cf- . | tar -C $PREFIX/lib -xf-
+tar -C $MES_SEED -cf- . | tar -C $PREFIX/lib -xf-
+
+rm -f $PREFIX/lib/linux/x86_64-mes/crt1

@@ -23,8 +23,8 @@ GUIX=${GUIX-$(command -v guix||:)}
 MES_PREFIX=${MES_PREFIX-../mes}
 ##MES_PREFIX=${MES_PREFIX-$(dirname $MESCC)/../share/mes}
 C_INCLUDE_PATH=${C_INCLUDE_PATH-$MES_PREFIX/include}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
-LIBRARY_PATH=${LIBRARY_PATH-..$TINYCC_SEED}
+MES_SEED=${MES_SEED-../mes-seed}
+LIBRARY_PATH=${LIBRARY_PATH-..$MES_SEED}
 
 if [ -z "$interpreter" -a -n "$GUIX" ]; then
     interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
@@ -111,7 +111,7 @@ $TCC\
     -D CONFIG_TCC_STATIC=1\
     -D TCC_TARGET_I386=1\
     -L .\
-    -L $TINYCC_SEED\
+    -L $MES_SEED\
     tcc.c\
     $LIBTCC1
 
