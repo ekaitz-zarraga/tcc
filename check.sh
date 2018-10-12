@@ -304,11 +304,11 @@ mkdir -p scaffold/tinycc
 
 expect=$(echo $broken | wc -w)
 for t in $tests; do
-    if [ ! -f $MES_PREFIX/scaffold/tinycc/"$t.c" ]; then
+    if [ ! -f tests/tests2/"$t.c" ]; then
         echo ' [SKIP]'
         continue;
     fi
-    sh test.sh "$MES_PREFIX/scaffold/tinycc/$t" &> scaffold/tinycc/"$t".log
+    sh test.sh tests/tests2/"$t" &> tests/tests2/"$t".log
     r=$?
     total=$((total+1))
     if [ $r = 0 ]; then
