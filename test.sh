@@ -6,15 +6,14 @@ TCC=${TCC-./mes-tcc}
 MESCC=${MESCC-mescc}
 MES_PREFIX=${MES_PREFIX-../mes}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}}
-MES_SEED=${MES_SEED-../mes-seed}
 OBJDUMP=${OBJDUMP-objdump}
 DIFF=${DIFF-diff}
 
 unset C_INCLUDE_PATH LIBRARY_PATH
 
-t=${1-$MES_PREFIX/scaffold/tests/t}
-mkdir -p scaffold
-b=scaffold/${t##*/}
+t=${1-$MES_PREFIX/lib/tests/scaffold/t.c}
+mkdir -p scaffold/tests
+b=scaffold/tests/${t##*/}
 rm -f "$b".i686-unknown-linux-gnu-out
 rm -f "$b".mes-out
 
@@ -30,13 +29,12 @@ if [ -x ./i686-unknown-linux-gnu-tcc ]; then
         -I $MES_PREFIX/include\
         -I $MES_PREFIX/scaffold/tests\
         -I $MES_PREFIX/scaffold/tinycc\
-        "$t".c &> 1
+        "$t" &> 1
     #$OBJDUMP -d "$t".mes-gcc-o > 1.s
     ./i686-unknown-linux-gnu-tcc\
         -static\
         -o "$b".mes-gcc-out\
         -L .\
-        -L $MES_SEED\
         "$b".mes-gcc-o &> 1.link
     set +e
     "$b".mes-gcc-out arg1 arg2 arg3 arg4 arg5 > "$b".mes-gcc-stdout
@@ -58,7 +56,7 @@ $TCC\
     -I $MES_PREFIX/include\
     -I $MES_PREFIX/scaffold/tests\
     -I $MES_PREFIX/scaffold/tinycc\
-    "$t".c &> 2
+    "$t" &> 2
 $OBJDUMP -d "$b".mes-o > 2.s || true
 $TCC\
     -static\
@@ -69,8 +67,7 @@ $TCC\
     -I $MES_PREFIX/include\
     -I $MES_PREFIX/scaffold/tests\
     -I $MES_PREFIX/scaffold/tinycc\
-    -L $MES_SEED\
-    "$t".c &> 2.link
+    "$t" &> 2.link
 set +e
 "$b".mes-out arg1 arg2 arg3 arg4 arg5 > "$b".mes-stdout
 m=$?

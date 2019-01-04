@@ -13,7 +13,6 @@ export MES_PREFIX
 export ONE_SOURCE
 export PREFIX
 export PREPROCESS
-export TINYCC_SEED
 
 PREFIX=usr
 HEX2=../mescc-tools/bin/hex2
@@ -33,8 +32,7 @@ MESCC=${MESCC-../mes/pre-inst-env mescc}
 GUILE_LOAD_PATH=nyacc
 
 MES_DEBUG=2
-MES_PREFIX=${MES_PREFIX-../mes}
-TINYCC_SEED=${TINYCC_SEED-../tinycc-seed}
+MES_PREFIX=${MES_PREFIX-mes-source}
 
 rm -f mes
 ln -sf $MES_PREFIX mes

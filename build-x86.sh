@@ -9,23 +9,24 @@ unset C_INCLUDE_PATH LIBRARY_PATH
 
 PREFIX=${PREFIX-usr}
 GUIX=${GUIX-$(command -v guix||:)}
-MES_PREFIX=${MES_PREFIX-../mes}
-MES_PREFIX=${MES_PREFIX-${MESCC%/*}/../share/mes}
-MES_SEED=${MES_SEED-../mes-seed}
-cp $MES_SEED/x86-mes-gcc/crt1.o crt1.o
-cp $MES_SEED/x86-mes-gcc/crti.o crti.o
-cp $MES_SEED/x86-mes-gcc/crtn.o crtn.o
+MES_PREFIX=${MES_PREFIX-mes-source}
+MES_SOURCE=${MES_SOURCE-mes-source}
+# cp $MES_PREFIX/lib/x86-mes-gcc/crt1.o crt1.o
+# cp $MES_PREFIX/lib/x86-mes-gcc/crti.o crti.o
+# cp $MES_PREFIX/lib/x86-mes-gcc/crtn.o crtn.o
 
 CC=${CC-i686-unknown-linux-gnu-gcc}
 CFLAGS="
 -nostdinc
 -nostdlib
 -fno-builtin
---include=$MES_PREFIX/lib/linux/x86-mes-gcc/crt1.c
---include=$MES_PREFIX/lib/libc+tcc.c
---include=$MES_PREFIX/lib/libtcc1.c
+--include=$MES_SOURCE/lib/linux/x86-mes-gcc/crt1.c
 -Wl,-Ttext-segment=0x1000000
 "
+
+#--include=$MES_SOURCE/lib/libc+tcc.c
+#--include=$MES_SOURCE/lib/libtcc1.c
+
 
 if [ -z "$interpreter" -a -n "$GUIX" ]; then
     interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
@@ -36,10 +37,14 @@ fi
 interpreter=${interpreter-interpreter}
 export interpreter
 
+cp $MES_SOURCE/gcc-lib/libc+tcc.a .
+cp $MES_SOURCE/gcc-lib/libtcc1.a .
+cp $MES_SOURCE/gcc-lib/libc+tcc.a libc.a
+
 mkdir -p $PREFIX/lib
 ABSPREFIX=$(cd $PREFIX && pwd)
-cp $MES_SEED/x86-mes-gcc/libc+tcc.o $ABSPREFIX/lib
-cp $MES_SEED/x86-mes-gcc/libtcc1.o $ABSPREFIX/lib
+#cp $MES_SEED/x86-mes-gcc/libc+tcc.o $ABSPREFIX/lib
+#cp $MES_SEED/x86-mes-gcc/libtcc1.o $ABSPREFIX/lib
 $CC -g -o i686-unknown-linux-gnu-tcc\
    $CFLAGS\
    -I.\
@@ -59,4 +64,6 @@ $CC -g -o i686-unknown-linux-gnu-tcc\
    -D ONE_SOURCE=1\
    -D TCC_MES_LIBC=1\
    -D TCC_TARGET_I386=1\
-   tcc.c
+   tcc.c\
+   libtcc1.a\
+   libc.a

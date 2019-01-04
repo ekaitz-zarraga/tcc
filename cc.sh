@@ -16,7 +16,7 @@ MES=${MES-../mes/src/mes}
 MESCC=${MESCC-mescc}
 CFLAGS=${CFLAGS-}
 MES_PREFIX=${MES_PREFIX-${MESCC%/*}}
-ABSPREFIX=$(cd $PREFIX && pwd)
+absprefix=$(cd $prefix && pwd)
 
 if [ -z "$interpreter" -a -n "$GUIX" ]; then
     interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
@@ -38,12 +38,12 @@ if [ -n "$PREPROCESS" ]; then
  -I $MES_PREFIX/lib\
  -I $MES_PREFIX/include\
  -D inline=\
- -D 'CONFIG_TCCDIR="'$PREFIX'/lib/tcc"'\
- -D 'CONFIG_TCC_CRTPREFIX="'$PREFIX'/lib:{B}/lib:."'\
+ -D 'CONFIG_TCCDIR="'$prefix'/lib/tcc"'\
+ -D 'CONFIG_TCC_CRTPREFIX="'$prefix'/lib:{B}/lib:."'\
  -D 'CONFIG_TCC_ELFINTERP="'$interpreter'"'\
- -D 'CONFIG_TCC_LIBPATHS="'$ABSPREFIX'/lib:{B}/lib:."'\
- -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$PREFIX'/include:{B}/include"'\
- -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc.a"'\
+ -D 'CONFIG_TCC_LIBPATHS="'$absprefix'/lib:{B}/lib:."'\
+ -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$prefix'/include:{B}/include"'\
+ -D 'TCC_LIBGCC="'$absprefix'/lib/libc.a"'\
  -D BOOTSTRAP=1\
  -D CONFIG_TCCBOOT=1\
  -D CONFIG_TCC_STATIC=1\
@@ -59,13 +59,13 @@ else
  -I $MES_PREFIX/lib\
  -I $MES_PREFIX/include\
  -D inline=\
- -D 'CONFIG_TCCDIR="'$PREFIX'/lib/tcc"'\
- -D 'CONFIG_TCC_CRTPREFIX="'$PREFIX'/lib:{B}/lib:."'\
+ -D 'CONFIG_TCCDIR="'$prefix'/lib/tcc"'\
+ -D 'CONFIG_TCC_CRTPREFIX="'$prefix'/lib:{B}/lib:."'\
  -D 'CONFIG_TCC_ELFINTERP="'$interpreter'"'\
- -D 'CONFIG_TCC_LIBPATHS="'$ABSPREFIX'/lib:{B}/lib:."'\
- -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$PREFIX'/include:{B}/include"'\
+ -D 'CONFIG_TCC_LIBPATHS="'$absprefix'/lib:{B}/lib:."'\
+ -D 'CONFIG_TCC_SYSINCLUDEPATHS="'$MES_PREFIX'/include:'$prefix'/include:{B}/include"'\
  -D CONFIG_USE_LIBGCC=1\
- -D 'TCC_LIBGCC="'$ABSPREFIX'/lib/libc.a"'\
+ -D 'TCC_LIBGCC="'$absprefix'/lib/libc.a"'\
  -D BOOTSTRAP=1\
  -D CONFIG_TCCBOOT=1\
  -D CONFIG_TCC_STATIC=1\
