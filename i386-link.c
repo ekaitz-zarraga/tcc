@@ -162,90 +162,29 @@ void relocate_init(Section *sr)
     qrel = (ElfW_Rel *) sr->data;
 }
 
-uint16_t my_read16le(unsigned char *p) {
-  trace_enter ("my_read16le");
-  //return p[0] | (uint16_t)p[1] << 8;
-  trace ("p="); eputs (itoa (p)); eputs ("\n");
-  trace ("*p="); eputc (*p); eputs ("\n");
-  trace ("p[0]="); eputs (itoa (p[0])); eputs ("\n");
-  uint16_t i = p[0];
-  trace ("my_read16le 00\n");
-  //uint16_t j = (uint16_t)p[1] << 8;
-  trace ("p[1]="); eputs (itoa (p[1])); eputs ("\n");
-  uint16_t j = (uint16_t)p[1];
-  trace ("my_read16le 01\n");
-  j <<= 8;
-  trace ("my_read16le 02\n");
-  uint16_t r = i | j;
-  trace_exit ("my_read16le");
-  return r;
-}
-
-uint32_t my_read32le(unsigned char *p) {
-  //return read16le(p) | (uint32_t)read16le(p + 2) << 16;
-  //return read16le(p) | (uint32_t)read16le(p + 2) << 16;
-  trace_enter ("my_read32le");
-  uint32_t r16 = my_read16le(p);
-  uint32_t r162 = (uint32_t)my_read16le(p + 2) << 16;
-  uint32_t r32 = r16 | r162;
-  trace_exit ("my_read32le");
-  return r32;
-}
-
-void my_write32le(unsigned char *p, uint32_t x) {
-  trace_enter ("my_write32le");
-  write16le(p, x), write16le(p + 2, x >> 16);
-  trace_exit ("my_write32le");
-}
-
-void my_add32le(unsigned char *p, int32_t x) {
-  trace_enter ("my_add32le");
-  //write32le(p, read32le(p) + x);
-  int32_t r32 = my_read32le(p);
-  r32 += x;
-  my_write32le(p, r32);
-  trace_exit ("my_add32le");
-}
-
 void relocate(TCCState *s1, ElfW_Rel *rel, int type, unsigned char *ptr, addr_t addr, addr_t val)
 {
-  trace_enter ("relocate");
     int sym_index, esym_index;
 
     sym_index = ELFW(R_SYM)(rel->r_info);
 
-    trace ("relocate type="); eputs (itoa (type)); eputs ("\n");
     switch (type) {
         case R_386_32:
-            trace ("relocate 10\n");
             if (s1->output_type == TCC_OUTPUT_DLL) {
-                trace ("relocate 11\n");
                 esym_index = s1->sym_attrs[sym_index].dyn_index;
-                trace ("relocate 12\n");
                 qrel->r_offset = rel->r_offset;
-                trace ("relocate 13\n");
                 if (esym_index) {
-                    trace ("relocate 14\n");
                     qrel->r_info = ELFW(R_INFO)(esym_index, R_386_32);
-                    trace ("relocate 14.2\n");
                     qrel++;
-                    trace ("relocate 15\n");
-                    trace_exit ("relocate 16");
                     return;
                 } else {
-                    trace ("relocate 17\n");
                     qrel->r_info = ELFW(R_INFO)(0, R_386_RELATIVE);
-                    trace ("relocate 17.2\n");
                     qrel++;
                 }
             }
-            trace ("relocate 18\n");
-            my_add32le(ptr, val);
-            trace ("relocate 19\n");
-            trace_exit ("relocate");
+            add32le(ptr, val);
             return;
         case R_386_PC32:
-           trace ("relocate 20\n");
             if (s1->output_type == TCC_OUTPUT_DLL) {
                 /* DLL relocation */
                 esym_index = s1->sym_attrs[sym_index].dyn_index;
@@ -253,83 +192,53 @@ void relocate(TCCState *s1, ElfW_Rel *rel, int type, unsigned char *ptr, addr_t 
                     qrel->r_offset = rel->r_offset;
                     qrel->r_info = ELFW(R_INFO)(esym_index, R_386_PC32);
                     qrel++;
-                    trace ("relocate 25\n");
-                    trace_exit ("relocate");
                     return;
                 }
             }
             add32le(ptr, val - addr);
-            trace ("relocate 29\n");
-            trace_exit ("relocate");
             return;
         case R_386_PLT32:
-           trace ("relocate 30\n");
             add32le(ptr, val - addr);
-            trace ("relocate 35\n");
-            trace_exit ("relocate");
             return;
         case R_386_GLOB_DAT:
         case R_386_JMP_SLOT:
-           trace ("relocate 40\n");
             write32le(ptr, val);
-            trace ("relocate 41\n");
-            trace_exit ("relocate");
             return;
         case R_386_GOTPC:
-            trace ("relocate 45\n");
             add32le(ptr, s1->got->sh_addr - addr);
             return;
-            trace ("relocate 49\n");
-            trace_exit ("relocate");
         case R_386_GOTOFF:
             add32le(ptr, val - s1->got->sh_addr);
-            trace ("relocate 50\n");
-            trace_exit ("relocate");
             return;
         case R_386_GOT32:
         case R_386_GOT32X:
-            trace ("relocate 55\n");
             /* we load the got offset */
             add32le(ptr, s1->sym_attrs[sym_index].got_offset);
-            trace ("relocate 59\n");
-            trace_exit ("relocate");
             return;
         case R_386_16:
-            trace ("relocate 60\n");
             if (s1->output_format != TCC_OUTPUT_FORMAT_BINARY) {
             output_file:
                 tcc_error("can only produce 16-bit binary files");
             }
             write16le(ptr, read16le(ptr) + val);
-            trace ("relocate 63\n");
-            trace_exit ("relocate");
             return;
         case R_386_PC16:
-            trace ("relocate 65\n");
             if (s1->output_format != TCC_OUTPUT_FORMAT_BINARY)
                 goto output_file;
             write16le(ptr, read16le(ptr) + val - addr);
-            trace ("relocate 66\n");
-            trace_exit ("relocate");
             return;
         case R_386_RELATIVE:
             /* do nothing */
-            trace ("relocate 70\n");
-            trace_exit ("relocate");
             return;
         case R_386_COPY:
             /* This relocation must copy initialized data from the library
             to the program .bss segment. Currently made like for ARM
             (to remove noise of default case). Is this true?
             */
-            trace ("relocate 75\n");
-            trace_exit ("relocate");
             return;
         default:
             fprintf(stderr,"FIXME: handle reloc type %d at %x [%p] to %x\n",
                 type, (unsigned)addr, ptr, (unsigned)val);
-            trace ("relocate 80\n");
-            trace_exit ("relocate");
             return;
     }
 }
