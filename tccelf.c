@@ -413,6 +413,14 @@ ST_FUNC addr_t get_elf_sym_addr(TCCState *s, const char *name, int err)
     return sym->st_value;
 }
 
+#if __MESC_MES__ || !__MESC__
+#if !defined (__intptr_t_defined) && !defined (__MES_INTPTR_T)
+typedef unsigned long uintptr_t;
+#endif
+#else // guile
+#undef uintptr_t
+#endif
+
 /* return elf symbol value */
 LIBTCCAPI void *tcc_get_symbol(TCCState *s, const char *name)
 {
