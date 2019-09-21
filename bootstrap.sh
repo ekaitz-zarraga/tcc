@@ -146,18 +146,29 @@ cp -f libc.a $prefix/lib
 cp -f libtcc1.a $prefix/lib/tcc
 cp -f libgetopt.a $prefix/lib
 
+export prefix
+export CPPFLAGS
+
 TCC=./mes-tcc sh boot.sh
 TCC=./boot0-tcc sh boot.sh
 TCC=./boot1-tcc sh boot.sh
 TCC=./boot2-tcc sh boot.sh
 TCC=./boot3-tcc sh boot.sh
 TCC=./boot4-tcc sh boot.sh
-cmp boot4-tcc boot5-tcc
-cp -f boot4-tcc tcc
+TCC=./boot5-tcc sh boot.sh
+cmp boot5-tcc boot6-tcc
+cp -f boot5-tcc tcc
 
 CC=./tcc
 AR='./tcc -ar'
 if true; then
+    for i in 1 i n; do
+        rm -f crt$i.o;
+        cp -f $MES_PREFIX/lib/crt$i.c .
+        ##cp -f $MES_PREFIX/gcc-lib/x86-mes/crt$i.c .
+        $CC $CPPFLAGS $CFLAGS -static -nostdlib -nostdinc -c crt$i.c
+    done
+
     rm -f libc.a
     $CC -c $CPPFLAGS $CFLAGS libc.c
     $AR cr libc.a libc.o

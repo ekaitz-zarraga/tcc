@@ -173,6 +173,13 @@ ln -f boot4-tcc tcc
 CC=./tcc
 AR='./tcc -ar'
 if true; then
+    for i in 1 i n; do
+        rm -f crt$i.o;
+        cp -f $MES_PREFIX/lib/crt$i.c .
+        ##cp -f $MES_PREFIX/gcc-lib/x86-mes/crt$i.c .
+        $CC $CPPFLAGS $CFLAGS -static -nostdlib -nostdinc -c crt$i.c
+    done
+
     rm -f libc.a
     $CC -c $CPPFLAGS $CFLAGS libc.c
     $AR cr libc.a libc.o

@@ -151,4 +151,14 @@ echo $TCC\
     tcc.c\
     $LIBTCC1
 
+for i in 1 i n; do
+    rm -f crt$i.o;
+    ./${PROGRAM_PREFIX}tcc -c crt$i.c
+done
+
+rm -f libtcc1.a
+./${PROGRAM_PREFIX}tcc -c -g -D TCC_TARGET_I386=1 -o libtcc1.o lib/libtcc1.c
+./${PROGRAM_PREFIX}tcc -ar rc libtcc1.a libtcc1.o
+cp -f libtcc1.a $prefix/lib/tcc
+
 echo "boot.sh: done"
