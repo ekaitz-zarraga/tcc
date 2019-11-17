@@ -390,3 +390,27 @@ help:
 
 # --------------------------------------------------------------------------
 endif # ($(INCLUDED),no)
+
+###  dist
+.PHONY: dist
+
+PACKAGE=tcc
+COMMIT=$(shell git describe --dirty)
+CVS_VERSION=$(COMMIT:release_%=%)
+TARBALL_VERSION=$(subst _,.,$(CVS_VERSION))
+TARBALL_DIR:=$(PACKAGE)-$(TARBALL_VERSION)
+TARBALL=$(TARBALL_DIR).tar.gz
+# Be friendly to Debian; avoid using EPOCH
+MTIME=$(shell git show HEAD --format=%ct --no-patch)
+# Reproducible tarball
+TAR_FLAGS=--sort=name --mtime=@$(MTIME) --owner=0 --group=0 --numeric-owner --mode=go=rX,u+rw,a-s
+
+$(TARBALL):
+	(git ls-files					\
+	    --exclude=$(TARBALL_DIR);			\
+	    echo $^ | tr ' ' '\n')			\
+	    | tar $(TAR_FLAGS)				\
+	    --transform=s,^,$(TARBALL_DIR)/,S -T- -cf-	\
+	    | gzip -c --no-name > $@
+
+dist: $(TARBALL)
