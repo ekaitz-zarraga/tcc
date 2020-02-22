@@ -1,3 +1,70 @@
+Bootstrappable TCC/TinyCC -- Tiny C Compiler's bootstrappable fork
+------------------------------------------------------------------
+
+Bootstrappable TCC is a fork from mainline TCC development, that
+started spring 2017 from
+
+    commit 307b7b183d4ee56e74090b0e525d6a587840e31f
+    Author: Aron BARATH <baratharon@caesar.elte.hu>
+    Date:   Tue May 16 07:03:26 2017 +0200
+
+        the R_X86_64_GOTOFF64 relocation was missing
+
+and can be compiled by MesCC (https://gnu.org/s/mes).
+
+Initially the plan was to make TinyCC itself "bootstrappable"
+(https://bootstrappable.org).
+
+The best way to do so would be to gradually simplify the
+implementation of TinyCC by restricting the use of language constructs
+to a well-defined subset of C.  In bootstrapping each stage or
+compiler adds functionality; a compiler that is written in itself --a
+so-called `self-hosting' compiler--is not considered to be
+bootstrappable.
+
+At the time this vision was not received with much enthousiasm
+
+    https://lists.nongnu.org/archive/html/tinycc-devel/2017-09/msg00019.html
+
+so I decided to fork TinyCC and instead grow MesCC (a bootstrappable
+sub-C compiler in a subset of Guile Scheme) into a full C99 compiler.
+
+Currently, the Reduced Binary Seed Bootstrap of the GNU Guix System
+(https://guix.gnu.org/blog/2019/guix-reduces-bootstrap-seed-by-50/)
+uses bootstrappable-tinycc.
+
+The fork consists of about 12 patches
+
+    cee58e0 build: Support building from bootstrap-mes.
+    39de356 bootstrappable: Force static link.
+    2b6271d bootstrappable: Work around MesCC bug.
+    379c62d bootstrappable: add tcc.h include guards to include location.
+    274bd06 bootstrappable: Handle libtcc1.a.
+    6ae9aa4 bootstrappable: Skip tidy_section_headers.
+    a130ce1 bootstrappable: HAVE_FLOAT.
+    de906df bootstrappable: HAVE_BITFIELD.
+    540ba0b bootstrappable: HAVE_LONG_LONG.
+    306f677 bootstrappable: Work around Nyacc-0.80.42 bug.
+    9c97705 build: bootstrap build scripts.
+    584478f bootstrappable: Remove non-free grep test.
+
+that work around bugs and missing C language features in MesCC.  Only
+three of these are really interesting: the HAVE_* patches that allow
+for stepwise introduction of bitfields, doubles/floats and long longs.
+
+In time, I hope we can remove the need for this fork; either by
+upstreaming some bootstrappable work or else by maturing MesCC.
+
+At the time of writing, mainline (non-bootstrappable) tinycc lives
+here
+
+    https://repo.or.cz/tinycc.git
+    https://lists.nongnu.org/mailman/listinfo/tinycc-devel
+
+-- 
+janneke
+
+
 Tiny C Compiler - C Scripting Everywhere - The Smallest ANSI C compiler
 -----------------------------------------------------------------------
 
