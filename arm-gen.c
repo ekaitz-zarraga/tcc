@@ -804,7 +804,11 @@ struct avail_regs {
   int first_free_reg; /* next free register in the sequence, hole excluded */
 };
 
+#if !BOOTSTRAP
 #define AVAIL_REGS_INITIALIZER (struct avail_regs) { { 0, 0, 0}, 0, 0, 0 }
+#else
+#define AVAIL_REGS_INITIALIZER {0}
+#endif
 
 /* Find suitable registers for a VFP Co-Processor Register Candidate (VFP CPRC
    param) according to the rules described in the procedure call standard for
@@ -959,6 +963,7 @@ static int assign_regs(int nb_args, int float_abi, struct plan *plan, int *todo)
   *todo = 0;
   plan->pplans = tcc_malloc(nb_args * sizeof(*plan->pplans));
   memset(plan->clsplans, 0, sizeof(plan->clsplans));
+
   for(i = nb_args; i-- ;) {
     int j, start_vfpreg = 0;
     CType type = vtop[-i].type;
@@ -981,7 +986,12 @@ static int assign_regs(int nb_args, int float_abi, struct plan *plan, int *todo)
           start_vfpreg = assign_vfpreg(&avregs, align, size);
           end_vfpreg = start_vfpreg + ((size - 1) >> 2);
           if (start_vfpreg >= 0) {
+#if !BOOTSTRAP
             pplan = (struct param_plan) {start_vfpreg, end_vfpreg, &vtop[-i]};
+#else
+            struct param_plan tmp = {start_vfpreg, end_vfpreg, &vtop[-i]};
+            pplan = tmp;
+#endif
             if (is_hfa)
               add_param_plan(plan, pplan, VFP_STRUCT_CLASS);
             else
@@ -998,7 +1008,14 @@ static int assign_regs(int nb_args, int float_abi, struct plan *plan, int *todo)
 	 * CORE_STRUCT_CLASS or the first of STACK_CLASS. */
         for (j = ncrn; j < 4 && j < ncrn + size / 4; j++)
           *todo|=(1<<j);
+#if !BOOTSTRAP
         pplan = (struct param_plan) {ncrn, j, &vtop[-i]};
+#else
+        {
+          struct param_plan tmp =  {ncrn, j, &vtop[-i]};
+          pplan = tmp;
+        }
+#endif
         add_param_plan(plan, pplan, CORE_STRUCT_CLASS);
         ncrn += size/4;
         if (ncrn > 4)
@@ -1017,7 +1034,12 @@ static int assign_regs(int nb_args, int float_abi, struct plan *plan, int *todo)
           if (ncrn == 4)
             break;
         }
+#if !BOOTSTRAP
         pplan = (struct param_plan) {ncrn, ncrn, &vtop[-i]};
+#else
+        struct param_plan tmp = {ncrn, ncrn, &vtop[-i]};
+        pplan = tmp;
+#endif
         ncrn++;
         if (is_long)
           pplan.end = ncrn++;
@@ -1026,7 +1048,14 @@ static int assign_regs(int nb_args, int float_abi, struct plan *plan, int *todo)
       }
     }
     nsaa = (nsaa + (align - 1)) & ~(align - 1);
+#if !BOOTSTRAP
     pplan = (struct param_plan) {nsaa, nsaa + size, &vtop[-i]};
+#else
+    {
+      struct param_plan tmp = {nsaa, nsaa + size, &vtop[-i]};
+      pplan = tmp;
+    }
+#endif
     add_param_plan(plan, pplan, STACK_CLASS);
     nsaa += size; /* size already rounded up before */
   }
