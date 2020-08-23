@@ -1,13 +1,31 @@
 #! /bin/sh
 
+set -e
+
 if [ "$V" = 1 -o "$V" = 2 ]; then
     set -x
 fi
 
-set -e
+arch=$(uname -m)
+case $arch in
+     arm*|aarch*)
+         cpu=arm
+         mes_cpu=arm
+         tcc_cpu=arm
+         triplet=arm-unknown-linux-gnueabihf
+         cross_prefix=${triplet}-
+         ;;
+     *)
+         cpu=x86
+         mes_cpu=x86
+         tcc_cpu=i386
+         triplet=i686-unknown-linux-gnu
+         cross_prefix=${triplet}-
+         ;;
+esac
 
 prefix=${prefix-usr}
-MES_PREFIX=${MES_PREFIX-${MESCC%/*}}
+MES_PREFIX=${MES_PREFIX-mes}
 
 mkdir -p $prefix/bin
 cp tcc $prefix/bin
@@ -21,6 +39,10 @@ cp crtn.o $prefix/lib/crtn.o
 mkdir -p $prefix/lib/tcc
 cp libc.a $prefix/lib
 cp libtcc1.a $prefix/lib/tcc
+if [ $mes_cpu = arm ]; then
+    cp libtcc1-mes.a $prefix/lib/tcc
+fi
+
 cp libgetopt.a $prefix/lib
 
 mkdir -p $prefix/share

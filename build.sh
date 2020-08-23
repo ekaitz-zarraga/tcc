@@ -3,109 +3,61 @@
 set -e
 
 export V
+export MESCC
 export MES_DEBUG
 export MES_PREFIX
+export MES_LIB
+export MES_SOURCE
+export ONE_SOURCE
+export PREPROCESS
+export REBUILD_LIBC
+
+export cpu
+export cross_prefix
+export mes_cpu
 export prefix
-export interpreter
+export tcc_cpu
+export triplet
 
 if test "$V" = 1 -o "$V" = 2; then
     set -x
 fi
 
-rm -f tcc.E tcc.hex2 tcc.M1 tcc.m1 mes-tcc boot?-tcc
-
-verbose=
-if test "$V" = 1; then
-    MESCCFLAGS="$MESCCFLAGS -v"
-elif test "$V" = 2; then
-    MESCCFLAGS="$MESCCFLAGS -vv"
-fi
-
 unset CPATH C_INCLUDE_PATH LIBRARY_PATH
-prefix=${prefix-/usr/local}
-mescc=${mescc-$(command -v mescc)}
+prefix=${prefix-usr}
+export prefix
+MESCC=${MESCC-mes-source/pre-inst-env mescc}
 
-GUIX=${GUIX-$(command -v guix||:)}
-CC=${mescc-mescc}
-MES=${MES-../mes/src/mes}
-HEX2=${HEX2-hex2}
-M1=${M1-M1}
-BLOOD_ELF=${BLOOD_ELF-blood-elf}
-
-MES_PREFIX=${MES_PREFIX-mes}
-MES_SOURCE=${MES_SOURCE-mes-source}
-
-if [ -z "$interpreter" -a -n "$GUIX" ]; then
-    interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
-elif [ -x /lib/ld-linux.so.2 ]; then
-    # legacy non-GuixSD support
-    interpreter=/lib/ld-linux.so.2
-fi
-interpreter=${interpreter-interpreter}
-export interpreter
-
-mkdir -p $prefix/lib
-
-if test "$V" = 2; then
-    sh $mescc --help
-fi
-
-if [ -n "$ONE_SOURCE" ]; then
-    sh cc.sh tcc
-    files="tcc.S"
-else
-    sh cc.sh tccpp
-    sh cc.sh tccgen
-    sh cc.sh tccelf
-    sh cc.sh tccrun
-    sh cc.sh i386-gen
-    sh cc.sh i386-link
-    sh cc.sh i386-asm
-    sh cc.sh tccasm
-    sh cc.sh libtcc
-    sh cc.sh tcc
-    files="
-tccpp.S
-tccgen.S
-tccelf.S
-tccrun.S
-i386-gen.S
-i386-link.S
-i386-asm.S
-tccasm.S
-libtcc.S
-tcc.S
-"
-fi
-
-$MESCC\
-    $MESCCFLAGS\
-    -g\
-    -o mes-tcc\
-    -L $MES_SOURCE/lib\
-    $files\
-    -l c+tcc
-
+CC=${CC-$MESCC}
 host=${host-$($CC -dumpmachine 2>/dev/null)}
 if test -z "$host$host_type"; then
     mes_cpu=${arch-$(get_machine || uname -m)}
 else
     mes_cpu=${host%%-*}
 fi
-if test "$mes_cpu" = i386\
-        || test "$mes_cpu" = i486\
-        || test "$mes_cpu" = i586\
-        || test "$mes_cpu" = i686; then
-    mes_cpu=x86
-fi
-if test "$mes_cpu" = armv4\
-        || test "$arch" = armv7l; then
-    mes_cpu=arm
-fi
-if test "$mes_cpu" = amd64; then
-    mes_cpu=x86_64
-fi
-
+case "$mes_cpu" in
+    i386|i486|i586|i686|x86)
+        mes_cpu=x86
+        tcc_cpu=i386
+        have_float=${have_float-true}
+        have_long_long=${have_long_long-true}
+        have_setjmp=${have_setjmp-true}
+        ;;
+    armv4|armv7l|arm)
+        mes_cpu=arm
+        tcc_cpu=arm
+        have_float=${have_float-false}
+        have_long_long=${have_long_long-true}
+        have_setjmp=${have_setjmp-false}
+        ;;
+    amd64)
+        tcc_cpu=x86_64
+        mes_cpu=x86_64
+        have_float=${have_float-true}
+        have_long_long=${have_long_long-true}
+        have_setjmp=${have_setjmp-true}
+        ;;
+esac
 case "$host" in
     *linux-gnu|*linux)
         mes_kernel=linux;;
@@ -114,87 +66,169 @@ case "$host" in
     *)
         mes_kernel=linux;;
 esac
+export mes_cpu
+export tcc_cpu
+export have_float
+export have_long_long
+export have_setjmp
+
+MES=${MES-mes-source/bin/mes}
+MES_PREFIX=${MES_PREFIX-mes}
+MES_SOURCE=${MES_SOURCE-mes-source}
+MES_LIB=${MES_LIB-$MES_PREFIX/lib}
+MES_LIB=$MES_SOURCE/gcc-lib/${mes_cpu}-mes
+
+PREPROCESS=${PREPROCESS-true}
+ONE_SOURCE=${ONE_SOURCE-false}
+
+interpreter=/lib/mes-loader
+rm -f tcc.E tcc.hex2 tcc.M1 tcc.m1 mes-tcc boot?-tcc
+
+verbose=
+if test "$V" = 1; then
+    MESCCFLAGS="$MESCCFLAGS -v"
+elif test "$V" = 2; then
+    MESCCFLAGS="$MESCCFLAGS -v -v"
+fi
+
+mkdir -p $prefix/lib
+
+if test "$V" = 2; then
+    sh $MESCC --help
+fi
+
+if $ONE_SOURCE; then
+    sh cc.sh tcc
+    files="tcc.S"
+else
+    sh cc.sh tccpp
+    sh cc.sh tccgen
+    sh cc.sh tccelf
+    sh cc.sh tccrun
+    sh cc.sh ${tcc_cpu}-gen
+    sh cc.sh ${tcc_cpu}-link
+    sh cc.sh ${tcc_cpu}-asm
+    sh cc.sh tccasm
+    sh cc.sh libtcc
+    sh cc.sh tcc
+    files="
+tccpp.S
+tccgen.S
+tccelf.S
+tccrun.S
+${tcc_cpu}-gen.S
+${tcc_cpu}-link.S
+${tcc_cpu}-asm.S
+tccasm.S
+libtcc.S
+tcc.S
+"
+fi
+
+$MESCC                                          \
+    $MESCCFLAGS                                 \
+    -g                                          \
+    -o mes-tcc                                  \
+    -L $MES_SOURCE/mescc-lib                    \
+    -L $MES_SOURCE/lib                          \
+    $files                                      \
+    -l c+tcc
 
 CC="./mes-tcc"
 AR="./mes-tcc -ar"
-CPPFLAGS="-I $MES_PREFIX/include -I $MES_PREFIX/include/$mes_kernel/$mes_cpu"
+CPPFLAGS="
+-I $MES_PREFIX/include
+-I $MES_PREFIX/include/$mes_kernel/$mes_cpu
+-I $MES_PREFIX/lib
+-D BOOTSTRAP=1
+"
+
+if test "$mes_cpu" = x86; then
+    CPP_TARGET_FLAG="-D TCC_TARGET_I386=1"
+elif test "$mes_cpu" = arm; then
+    CPP_TARGET_FLAG="-D TCC_TARGET_ARM=1 -D TCC_ARM_VFP=1 -D CONFIG_TCC_LIBTCC1_MES=1"
+elif test "$mes_cpu" = x86_64; then
+    CPP_TARGET_FLAG="-D TCC_TARGET_X86_64=1"
+else
+    echo "cpu not supported: $mes_cpu"
+fi
+
 CFLAGS=
 
-REBUILD_LIBC=${REBUILD_LIBC-t}
+REBUILD_LIBC=${REBUILD_LIBC-true}
 
-if [ -n "$REBUILD_LIBC" ]; then
+mkdir -p $prefix/lib/tcc
+if $REBUILD_LIBC; then
     for i in 1 i n; do
         rm -f crt$i.o;
-        cp -f $MES_PREFIX/lib/crt$i.c .
-        ##cp -f $MES_PREFIX/gcc-lib/x86-mes/crt$i.c .
+        cp -f $MES_LIB//crt$i.c .
         $CC $CPPFLAGS $CFLAGS -static -nostdlib -nostdinc -c crt$i.c
     done
 
     rm -f libc.a
-    cp -f ${MES_PREFIX}/lib/libc+gnu.c libc.c
-    ## cp -f ${MES_PREFIX}/gcc-lib/x86-mes/libc+gnu.c libc.c
+    cp -f $MES_LIB/libc+gnu.c libc.c
     $CC -c $CPPFLAGS $CFLAGS libc.c
     $AR cr libc.a libc.o
 
     rm -f libtcc1.a
-    cp -f ${MES_PREFIX}/lib/libtcc1.c .
-    ## cp -f ${MES_PREFIX}/gcc-lib/x86-mes/libtcc1.c .
-    $CC -c $CPPFLAGS $CFLAGS libtcc1.c
+    cp -f $MES_LIB/libtcc1.c .
+    $CC -c $CPPFLAGS $CPP_TARGET_FLAG $CFLAGS lib/libtcc1.c
     $AR cr libtcc1.a libtcc1.o
 
+    if [ $mes_cpu = arm ]; then
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG lib/armeabi.c
+
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG -o libtcc1-tcc.o lib/libtcc1.c
+        $AR rc libtcc1-tcc.a libtcc1-tcc.o armeabi.o
+
+        $CC -c -g $CPPFLAGS $CFLAGS -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -o libtcc1-mes.o $MES_LIB/libtcc1.c
+        $AR cr libtcc1-mes.a libtcc1-mes.o armeabi.o
+
+        $CC -c -g $CPP_TARGET_FLAG $CFLAGS -o libtcc1.o lib/libtcc1.c
+        # $AR cr libtcc1.a libtcc1.o armeabi.o
+        $AR cr libtcc1.a libtcc1.o
+
+        cp -f libtcc1-tcc.a $prefix/lib/tcc
+        cp -f libtcc1-mes.a $prefix/lib/tcc
+    fi
+
     rm -f libgetopt.a
-    cp -f ${MES_PREFIX}/lib/libgetopt.c .
-    ## cp -f ${MES_PREFIX}/gcc-lib/x86-mes/libgetopt.c .
+    cp -f $MES_LIB/libgetopt.c .
     $CC -c $CPPFLAGS $CFLAGS libgetopt.c
     $AR cr libgetopt.a libgetopt.o
-
 else
-    cp -f $MES_PREFIX/lib/crt1.o .
-    cp -f $MES_PREFIX/lib/crti.o .
-    cp -f $MES_PREFIX/lib/crtn.o .
-    cp -f $MES_PREFIX/lib/libc+gnu.a .
-    cp -f $MES_PREFIX/lib/libtcc1.a .
+    cp -f $MES_LIB/crt1.o .
+    cp -f $MES_LIB/crti.o .
+    cp -f $MES_LIB/crtn.o .
+    cp -f $MES_LIB/libc+gnu.a libc.a
+    cp -f $MES_LIB/libtcc1.a .
+    cp -f $MES_LIB/libgetopt.a .
 
-    ## cp -f $MES_PREFIX/gcc-lib/libc+gnu.a libc.a
-    ## cp -f $MES_PREFIX/gcc-lib/libtcc1.a .
-    ## cp -f $MES_PREFIX/gcc-lib/crt1.o .
-    ## cp -f $MES_PREFIX/gcc-lib/crti.o .
-    ## cp -f $MES_PREFIX/gcc-lib/crtn.o .
+    if [ $mes_cpu = arm ]; then
+        $CC -c $CPPFLAGS $CFLAGS $MES_LIB/libtcc1.c
+        $CC -c $CPPFLAGS $CFLAGS lib/armeabi.c
+    fi
 fi
 
-sh boot.sh
+cp -f libc.a $prefix/lib
+cp -f libtcc1.a $prefix/lib/tcc
+cp -f libgetopt.a $prefix/lib
+
+rm -rf mes-usr
+mkdir -p mes-usr
+cp *.M1 mes-usr
+cp *.S mes-usr
+cp *.a mes-usr
+
+REBUILD_LIBC=true
+TCC=./mes-tcc sh boot.sh
 TCC=./boot0-tcc sh boot.sh
 TCC=./boot1-tcc sh boot.sh
 TCC=./boot2-tcc sh boot.sh
 TCC=./boot3-tcc sh boot.sh
-
-ln -f boot4-tcc tcc
-
-CC=./tcc
-AR='./tcc -ar'
-if true; then
-    for i in 1 i n; do
-        rm -f crt$i.o;
-        cp -f $MES_PREFIX/lib/crt$i.c .
-        ##cp -f $MES_PREFIX/gcc-lib/x86-mes/crt$i.c .
-        $CC $CPPFLAGS $CFLAGS -static -nostdlib -nostdinc -c crt$i.c
-    done
-
-    rm -f libc.a
-    $CC -c $CPPFLAGS $CFLAGS libc.c
-    $AR cr libc.a libc.o
-
-    rm -f libtcc1.a
-    $CC -c $CPPFLAGS $CFLAGS libtcc1.c
-    $AR cr libtcc1.a libtcc1.o
-
-    rm -f libgetopt.a
-    $CC -c $CPPFLAGS $CFLAGS libgetopt.c
-    $AR cr libgetopt.a libgetopt.o
-
-    cp -f libc.a $prefix/lib
-    cp -f libtcc1.a $prefix/lib/tcc
-    cp -f libgetopt.a $prefix/lib
-fi
+TCC=./boot4-tcc sh boot.sh
+TCC=./boot5-tcc sh boot.sh
+cmp boot5-tcc boot6-tcc
+cp -f boot5-tcc tcc
 
 echo "build.sh: done"
