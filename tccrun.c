@@ -273,7 +273,9 @@ static void set_pages_executable(void *ptr, unsigned long length)
     if (mprotect((void *)start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC))
         tcc_error("mprotect failed: did you mean to configure --with-selinux?");
 # if defined TCC_TARGET_ARM || defined TCC_TARGET_ARM64
+#if !BOOTSTRAP
     __clear_cache(ptr, (char *)ptr + length);
+#endif
 # endif
 #endif
 }
