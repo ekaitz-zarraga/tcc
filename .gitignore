@@ -54,3 +54,4 @@ tests/libtcc_test
 tests/vla_test
 tests/hello
 tests/tests2/fred.txt
+tests/tests2/*.1

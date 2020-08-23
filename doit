@@ -1,57 +1,81 @@
 #! /bin/sh
 set -ex
 
-export BLOOD_ELF
-export BUILD_DEBUG
-export GUILE_LOAD_PATH
-export HEX2
-export M1
+export V
 export MES
 export MESCC
 export MES_DEBUG
 export MES_PREFIX
+export MES_LIB
+export MES_SOURCE
 export ONE_SOURCE
-export PREFIX
 export PREPROCESS
+export REBUILD_LIBC
 
-PREFIX=usr
-HEX2=../mescc-tools/bin/hex2
-M1=../mescc-tools/bin/M1
-BLOOD_ELF=../mescc-tools/bin/blood-elf
-MES=${MES-../mes/src/mes}
+export cpu
+export cross_prefix
+export mes_cpu
+export prefix
+export tcc_cpu
+export triplet
+
+prefix=usr
+MES=${MES-mes-source/bin/mes}
 MES_ARENA=70000000
 MES_MAX_ARENA=70000000
 export MES_ARENA MES_MAX_ARENA
 
 MES=guile
-#MES=${MES-../mes/src/mes.gcc}
-#MES=${MES-../mes/src/mes.mlibc-gcc}
-MESCC=${MESCC-../mes/pre-inst-env mescc}
+MES=${MES-mes-source/bin/mes}
+MESCC=${MESCC-mes-source/pre-inst-env mescc}
 
-#GUILE_LOAD_PATH=/home/janneke/src/nyacc/module:$GUILE_LOAD_PATH
-GUILE_LOAD_PATH=nyacc
-
-MES_DEBUG=2
 MES_PREFIX=${MES_PREFIX-mes-source}
+
+REBUILD_LIBC=${REBUILD_LIBC-true}
 
 rm -f mes
 ln -sf $MES_PREFIX mes
 
-if [ -z "$interpreter" -a -n "$GUIX" ]; then
-    interpreter=$($GUIX environment --ad-hoc patchelf -- patchelf --print-interpreter $(guix build --system=i686-linux hello)/bin/hello)
-elif [ -x /lib/ld-linux.so.2 ]; then
-    # legacy non-GuixSD support
-    interpreter=/lib/ld-linux.so.2
-fi
-interpreter=${interpreter-interpreter}
-export interpreter
-
 sh build-gcc.sh
 
-PREPROCESS=1
-ONE_SOURCE=1
+PREPROCESS=${PREPROCESS-true}
+ONE_SOURCE=${ONE_SOURCE-false}
 
-sh build-x86.sh
+arch=$(uname -m)
+case $arch in
+     arm*|aarch*)
+         cpu=arm
+         mes_cpu=arm
+         tcc_cpu=arm
+         triplet=arm-unknown-linux-gnueabihf
+         cross_prefix=${triplet}-
+         have_float=${have_float-true}
+         have_long_long=${have_long_long-true}
+         have_setjmp=${have_setjmp-false}
+         ;;
+     *)
+         cpu=x86
+         mes_cpu=x86
+         tcc_cpu=i386
+         triplet=i686-unknown-linux-gnu
+         cross_prefix=${triplet}-
+         have_float=${have_float-true}
+         have_long_long=${have_long_long-true}
+         have_setjmp=${have_setjmp-true}
+         ;;
+esac
+export cpu
+export cross_prefix
+export tcc_cpu
+export triplet
+export have_float
+export have_long_long
+export have_setjmp
+
+MES_LIB=${MES_LIB-$MES_PREFIX/lib}
+MES_LIB=$MES_SOURCE/gcc-lib/${mes_cpu}-mes
+
+sh build-32.sh
 sh build.sh
 sh compile.sh
 sh link.sh ||:

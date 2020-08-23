@@ -1,15 +1,42 @@
-#! /bin/sh
+#! /usr/bin/env bash
 
-#MES_ARENA=${MES_ARENA-100000000}
-MES=${MES-mes}
-MESCC=${MESCC-mescc}
+export V
+if test "$V" = 1 -o "$V" = 2; then
+    set -x
+fi
 
-MES_PREFIX=${MES_PREFIX-../mes}
-MES_SOURCE=${MES_SOURCE-../mes-source}
+arch=$(uname -m)
+case $arch in
+     arm*|aarch*)
+         cpu=arm
+         tcc_cpu=arm
+         triplet=arm-unknown-linux-gnueabihf
+         cross_prefix=${triplet}-
+         ;;
+     *)
+         cpu=x86
+         tcc_cpu=i386
+         triplet=i686-unknown-linux-gnu
+         cross_prefix=${triplet}-
+         ;;
+esac
+export cpu
+export cross_prefix
+export tcc_cpu
+export triplet
 
-tests="
+GCC_TCC=${GCC_TCC-./${cross_prefix}tcc}
+TCC=${TCC-./tcc}
+MES_PREFIX=${MES_PREFIX-mes}
+MES_SOURCE=${MES_SOURCE-mes-source}
+export MES_PREFIX
+export MES_SOURCE
+
+mkdir -p lib/tests
+cp -r $MES_SOURCE/lib/tests lib
+
+mes_tests="
 lib/tests/scaffold/t.c
-lib/tests/scaffold/00-exit-0.c
 lib/tests/scaffold/01-return-0.c
 lib/tests/scaffold/02-return-1.c
 lib/tests/scaffold/03-call.c
@@ -61,13 +88,17 @@ lib/tests/scaffold/23-global-pointer-pointer-ref.c
 lib/tests/scaffold/23-pointer-sub.c
 lib/tests/scaffold/23-pointer.c
 lib/tests/mes/30-oputs.c
+lib/tests/mes/30-eputs.c
 lib/tests/string/30-strlen.c
+lib/tests/scaffold/30-exit-0.c
+lib/tests/scaffold/30-exit-42.c
 lib/tests/scaffold/32-call-wrap.c
 lib/tests/scaffold/32-compare.c
 lib/tests/scaffold/33-and-or.c
 lib/tests/scaffold/34-pre-post.c
 lib/tests/scaffold/35-compare-char.c
 lib/tests/scaffold/36-compare-arithmetic.c
+lib/tests/scaffold/36-compare-arithmetic-negative.c
 lib/tests/scaffold/37-compare-assign.c
 lib/tests/scaffold/38-compare-call-2.c
 lib/tests/scaffold/38-compare-call-3.c
@@ -88,6 +119,7 @@ lib/tests/mes/50-itoa.c
 lib/tests/posix/50-getenv.c
 lib/tests/stdlib/50-malloc.c
 lib/tests/string/50-strcmp.c
+lib/tests/string/50-strcmp-itoa.c
 lib/tests/string/50-strcpy.c
 lib/tests/string/50-strncmp.c
 lib/tests/posix/50-open-read.c
@@ -96,6 +128,7 @@ lib/tests/scaffold/54-argc.c
 lib/tests/scaffold/54-argv.c
 lib/tests/scaffold/55-char-array.c
 lib/tests/scaffold/60-math.c
+lib/tests/scaffold/60-math-itoa.c
 lib/tests/scaffold/61-array.c
 lib/tests/scaffold/62-array.c
 lib/tests/scaffold/63-struct.c
@@ -110,6 +143,9 @@ lib/tests/scaffold/63-struct-cell.c
 lib/tests/scaffold/64-make-cell.c
 lib/tests/scaffold/65-read.c
 lib/tests/scaffold/66-local-char-array.c
+"
+
+tcc_tests="
 lib/tests/scaffold/70-stdarg.c
 lib/tests/stdio/70-printf-hello.c
 lib/tests/stdio/70-printf-simple.c
@@ -168,6 +204,8 @@ lib/tests/scaffold/7u-vstack.c
 lib/tests/scaffold/70-array-in-struct-init.c
 lib/tests/scaffold/70-struct-short-enum-init.c
 lib/tests/scaffold/70-struct-post.c
+lib/tests/scaffold/70-extern.c
+lib/tests/scaffold/70-ternary-arithmetic-argument.c
 lib/tests/setjmp/80-setjmp.c
 lib/tests/stdio/80-sscanf.c
 lib/tests/stdlib/80-qsort.c
@@ -178,7 +216,9 @@ lib/tests/scaffold/82-define.c
 lib/tests/scaffold/83-heterogenoous-init.c
 lib/tests/scaffold/84-struct-field-list.c
 lib/tests/scaffold/85-sizeof.c
+"
 
+gnu_tests="
 lib/tests/dirent/90-readdir.c
 lib/tests/io/90-stat.c
 lib/tests/mes/90-abtod.c
@@ -191,7 +231,6 @@ lib/tests/stdio/90-fopen-append.c
 lib/tests/stdio/90-fread-fwrite.c
 lib/tests/stdio/90-fseek.c
 lib/tests/stdio/90-sprintf.c
-lib/tests/stdio/90-sscanf.c
 lib/tests/stdlib/90-strtol.c
 lib/tests/string/90-snprintf.c
 lib/tests/string/90-strpbrk.c
@@ -206,33 +245,39 @@ lib/tests/scaffold/a1-global-no-align.c
 lib/tests/scaffold/a1-global-no-clobber.c
 "
 
+tests="$mes_tests$tcc_tests$gnu_tests"
+
 broken="
 lib/tests/scaffold/t.c
-lib/tests/scaffold/00-exit-0.c
-lib/tests/scaffold/02-return-1.c
-lib/tests/scaffold/05-call-1.c
-lib/tests/scaffold/07-include.c
-lib/tests/posix/50-open-read.c
-lib/tests/scaffold/54-argc.c
-lib/tests/scaffold/54-argv.c
-lib/tests/scaffold/60-math.c
-lib/tests/scaffold/66-local-char-array.c
-lib/tests/string/70-strchr.c
-lib/tests/scaffold/7s-unsigned-compare.c
-
+lib/tests/scaffold/70-ternary-arithmetic-argument.c
 lib/tests/dirent/90-readdir.c
+lib/tests/io/90-stat.c
 lib/tests/stdio/90-fseek.c
-
 "
 
-if [ ! -x ./i686-unknown-linux-gnu-tcc ]; then
+if [ $TCC = ./tcc ]; then
+    broken="$broken
+lib/tests/scaffold/60-math.c
+lib/tests/scaffold/7s-unsigned-compare.c
+"
+fi
+
+if [ $tcc_cpu = "arm" ]; then
+    broken="$broken
+lib/tests/setjmp/80-setjmp.c
+lib/tests/mes/90-abtod.c
+lib/tests/signal/90-signal.c
+"
+fi
+
+if [ ! -x $GCC_TCC ]; then
     broken="$broken
 02-return-1
 05-call-1
 "
 fi
 
-if ! test -f $MES_SOURCE/lib/tests/scaffold/t.c; then
+if ! test -f lib/tests/scaffold/t.c; then
     tests=
     broken=
 fi
@@ -246,7 +291,7 @@ fail=0
 total=0
 for t in $tests; do
     b=$(basename "$t" .c)
-    sh test.sh "$MES_SOURCE/$t" &> "scaffold/tests/$b".log
+    sh test.sh "$t" &> "$t".log
     r=$?
     total=$((total+1))
     if [ $r = 0 ]; then
@@ -321,16 +366,16 @@ tests/tests2/55_lshift_type.c
 "
 
 broken="$broken
+tests/tests2/22_floating_point.c
+tests/tests2/23_type_coercion.c
 tests/tests2/24_math_library.c
 tests/tests2/34_array_assignment.c
+tests/tests2/49_bracket_evaluation.c
 tests/tests2/55_lshift_type.c
 "
 
 #tests/tests2/24_math_library.c         ; float, math
 #tests/tests2/34_array_assignment.c     ; fails with GCC
-
-
-mkdir -p scaffold/tinycc
 
 expect=$(echo $broken | wc -w)
 for t in $tests; do
