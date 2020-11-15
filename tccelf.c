@@ -337,8 +337,8 @@ static unsigned long elf_hash(const unsigned char *name)
 {
     unsigned long h = 0, g;
 
-    trace_enter ("elf_hash");
-    trace ("elf_hash name="); eputs (name); eputs ("\n");
+    //trace_enter ("elf_hash");
+    //trace ("elf_hash name="); eputs (name); eputs ("\n");
     while (*name) {
         h = (h << 4) + *name++;
         g = h & 0xf0000000;
@@ -346,8 +346,8 @@ static unsigned long elf_hash(const unsigned char *name)
             h ^= g >> 24;
         h &= ~g;
     }
-    trace ("elf_hash h="); eputs (itoa (h)); eputs ("\n");
-    trace_exit ("elf_hash");
+    //trace ("elf_hash h="); eputs (itoa (h)); eputs ("\n");
+    //trace_exit ("elf_hash");
     return h;
 }
 
@@ -384,7 +384,7 @@ static void rebuild_hash(Section *s, unsigned int nb_buckets)
             h = elf_hash(strtab + sym->st_name) % nb_buckets;
 #else
             h = elf_hash(strtab + sym->st_name);
-            trace ("rebuild_hash 22 h="); eputs (itoa (h)); eputs ("\n");
+            //trace ("rebuild_hash 22 h="); eputs (itoa (h)); eputs ("\n");
             trace ("rebuild_hash 22 nb_buckets="); eputs (itoa (nb_buckets)); eputs ("\n");
             h = h % nb_buckets;
             trace ("rebuild_hash 23 h="); eputs (itoa (h)); eputs ("\n");
@@ -435,7 +435,7 @@ ST_FUNC int put_elf_sym(Section *s, addr_t value, unsigned long size,
         trace ("put_elf_sym 21\n");
         ptr = section_ptr_add(hs, sizeof(int));
         trace ("put_elf_sym 22\n");
-        trace ("put_elf_sym 22 hs="); eputs (itoa (hs)); eputs ("\n");
+        //trace ("put_elf_sym 22 hs="); eputs (itoa (hs)); eputs ("\n");
         base = (int *)hs->data;
         trace ("put_elf_sym 23\n");
         /* only add global or weak symbols */
@@ -681,17 +681,17 @@ ST_FUNC int set_elf_sym(Section *s, addr_t value, unsigned long size,
     ElfW(Sym) *sym;
 #if 1
     for_each_elem(symtab_section, 1, sym, ElfW(Sym)) {
-        trace ("set_elf_sym num="); eputs (itoa (sym->st_shndx)); eputs ("\n");
+        //trace ("set_elf_sym num="); eputs (itoa (sym->st_shndx)); eputs ("\n");
         name = (char *) strtab_section->data + sym->st_name;
-        trace ("set_elf_sym name="); eputs (name); eputs ("\n");
+        //trace ("set_elf_sym name="); eputs (name); eputs ("\n");
     }
 #else
     for (sym = symtab_section->data; sym < (symtab_section->data + symtab_section->data_offset); sym++) {
-        trace ("set_elf_sym num="); eputs (itoa (sym->st_shndx)); eputs ("\n");
+        //trace ("set_elf_sym num="); eputs (itoa (sym->st_shndx)); eputs ("\n");
         name = strtab_section->data;
         name += sym->st_name;
         //name = ((char *) strtab_section->data) + sym->st_name;
-        trace ("set_elf_sym name="); eputs (name); eputs ("\n");
+        //trace ("set_elf_sym name="); eputs (name); eputs ("\n");
     }
 #endif
 
@@ -2859,7 +2859,7 @@ ST_FUNC int tcc_load_object_file(TCCState *s1,
             trace ("tcc_load_object_file 100\n");
             read(fd, ptr, size);
             trace ("tcc_load_object_file 101 size="); eputs (itoa (size)); eputs ("\n");
-            trace ("tcc_load_object_file 101 ptr="); eputs (ptr); eputs ("\n");
+            //trace ("tcc_load_object_file 101 ptr="); eputs (ptr); eputs ("\n");
         } else {
             s->data_offset += size;
             trace ("tcc_load_object_file x data_offset="); eputs (itoa (s->data_offset)); eputs ("\n");
