@@ -313,7 +313,12 @@ static void rebuild_hash(Section *s, unsigned int nb_buckets)
     sym = (ElfW(Sym) *)s->data + 1;
     for(sym_index = 1; sym_index < nb_syms; sym_index++) {
         if (ELFW(ST_BIND)(sym->st_info) != STB_LOCAL) {
+#if !BOOTSTRAP
             h = elf_hash(strtab + sym->st_name) % nb_buckets;
+#else
+            h = elf_hash(strtab + sym->st_name);
+            h = h % nb_buckets;
+#endif
             *ptr = hash[h];
             hash[h] = sym_index;
         } else {
@@ -355,7 +360,12 @@ ST_FUNC int put_elf_sym(Section *s, addr_t value, unsigned long size,
         if (ELFW(ST_BIND)(info) != STB_LOCAL) {
             /* add another hashing entry */
             nbuckets = base[0];
+#if !BOOTSTRAP
             h = elf_hash((unsigned char *) name) % nbuckets;
+#else
+            h = elf_hash((unsigned char *) name);
+            h = h % nbuckets;
+#endif
             *ptr = base[2 + h];
             base[2 + h] = sym_index;
             base[1]++;
@@ -385,7 +395,12 @@ ST_FUNC int find_elf_sym(Section *s, const char *name)
     if (!hs)
         return 0;
     nbuckets = ((int *)hs->data)[0];
+#if !BOOTSTRAP
     h = elf_hash((unsigned char *) name) % nbuckets;
+#else
+    h = elf_hash((unsigned char *) name);
+    h = h % nbuckets;
+#endif
     sym_index = ((int *)hs->data)[2 + h];
     while (sym_index != 0) {
         sym = &((ElfW(Sym) *)s->data)[sym_index];
