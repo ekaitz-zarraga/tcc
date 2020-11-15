@@ -1775,6 +1775,7 @@ void gen_opf(int op)
 #else
 static uint32_t is_fconst()
 {
+#if HAVE_FLOAT
   long double f;
   uint32_t r;
   if((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) != VT_CONST)
@@ -1808,6 +1809,7 @@ static uint32_t is_fconst()
     return r|6;
   if(f==10.0)
     return r|7;
+#endif
   return 0;
 }
 
