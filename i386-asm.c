@@ -223,7 +223,11 @@ static const uint8_t segment_prefixes[] = {
 static const ASMInstr asm_instrs[] = {
 #define ALT(x) x
 /* This removes a 0x0f in the second byte */
+#if HAVE_LONG_LONG
 #define O(o) ((uint64_t) ((((o) & 0xff00) == 0x0f00) ? ((((o) >> 8) & ~0xff) | ((o) & 0xff)) : (o)))
+#else
+#define O(o) ((uint32_t) ((((o) & 0xff00) == 0x0f00) ? ((((o) >> 8) & ~0xff) | ((o) & 0xff)) : (o)))
+#endif
 /* This constructs instr_type from opcode, type and group.  */
 #define T(o,i,g) ((i) | ((g) << OPC_GROUP_SHIFT) | ((((o) & 0xff00) == 0x0f00) ? OPC_0F : 0))
 #define DEF_ASM_OP0(name, opcode)
