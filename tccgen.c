@@ -2963,7 +2963,11 @@ ST_FUNC void vstore(void)
             else
 #endif
             /* Use memmove, rather than memcpy, as dest and src may be same: */
+#if BOOTSTRAP && __arm__
+            vpush_global_sym(&func_old_type, TOK___memmove);
+#else
             vpush_global_sym(&func_old_type, TOK_memmove);
+#endif
 
             vswap();
             /* source */
@@ -6036,7 +6040,11 @@ static void init_putz(Section *sec, unsigned long c, int size)
     if (sec) {
         /* nothing to do because globals are already set to zero */
     } else {
+#if BOOTSTRAP && __arm__
+        vpush_global_sym(&func_old_type, TOK___memset);
+#else
         vpush_global_sym(&func_old_type, TOK_memset);
+#endif
         vseti(VT_LOCAL, c);
 #ifdef TCC_TARGET_ARM
         vpushs(size);

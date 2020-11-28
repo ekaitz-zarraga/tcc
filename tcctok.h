@@ -167,6 +167,11 @@
 
 /* builtin functions or variables */
 #ifndef TCC_ARM_EABI
+#if BOOTSTRAP && __arm__
+     DEF(TOK___memcpy, "__memcpy")
+     DEF(TOK___memmove, "__memmove")
+     DEF(TOK___memset, "__memset")
+#endif
      DEF(TOK_memcpy, "memcpy")
      DEF(TOK_memmove, "memmove")
      DEF(TOK_memset, "memset")
