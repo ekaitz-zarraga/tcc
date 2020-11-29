@@ -2274,12 +2274,12 @@ static void gen_cast(CType *type)
         if (c) {
             /* constant case: we can do it now */
             /* XXX: in ISOC, cannot do it if error in convert */
+#if HAVE_FLOAT
             if (sbt == VT_FLOAT)
                 vtop->c.ld = vtop->c.f;
             else if (sbt == VT_DOUBLE)
                 vtop->c.ld = vtop->c.d;
 
-#if HAVE_FLOAT
             if (df) {
                 if ((sbt & VT_BTYPE) == VT_LLONG) {
                     if ((sbt & VT_UNSIGNED) || !(vtop->c.i >> 63))
@@ -2305,9 +2305,12 @@ static void gen_cast(CType *type)
             } else
 #endif
                    {
+#if HAVE_FLOAT
                 if(sf)
                     vtop->c.i = vtop->c.ld;
-                else if (sbt == (VT_LLONG|VT_UNSIGNED))
+                else
+#endif
+                  if (sbt == (VT_LLONG|VT_UNSIGNED))
                     ;
                 else if (sbt & VT_UNSIGNED)
                     vtop->c.i = (uint32_t)vtop->c.i;
@@ -6190,12 +6193,17 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 		*(short *)ptr |= (vtop->c.i & bit_mask) << bit_pos;
 		break;
 	    case VT_FLOAT:
+#if HAVE_FLOAT
 		*(float*)ptr = vtop->c.f;
+#endif
 		break;
 	    case VT_DOUBLE:
+#if HAVE_FLOAT
 		*(double *)ptr = vtop->c.d;
+#endif
 		break;
 	    case VT_LDOUBLE:
+#if HAVE_FLOAT
                 if (sizeof(long double) == LDOUBLE_SIZE)
 		    *(long double *)ptr = vtop->c.ld;
 		else if (sizeof(double) == LDOUBLE_SIZE)
@@ -6203,7 +6211,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 #if (defined __i386__ || defined __x86_64__) && (defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64)
                 else if (sizeof (long double) >= 10)
                     memcpy(memset(ptr, 0, LDOUBLE_SIZE), &vtop->c.ld, 10);
-#if defined (__TINYC__) && HAVE_FLOAT
+#if defined (__TINYC__)
                 else if (sizeof (long double) == sizeof (double))
                     __asm__("fldl %1\nfstpt %0\n" : "=m"
                         (memset(ptr, 0, LDOUBLE_SIZE), ptr) : "m" (vtop->c.ld));
@@ -6211,6 +6219,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 #endif
 		else
                     tcc_error("can't cross compile long double constants");
+#endif
 		break;
 #if PTR_SIZE != 8
 	    case VT_LLONG:

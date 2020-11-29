@@ -2357,11 +2357,15 @@ static void parse_number(const char *p)
                 tokc.d = strtod(token_buf, NULL);
 #else
                 tok = TOK_CLDOUBLE;
+#if HAVE_FLOAT
                 tokc.ld = strtold(token_buf, NULL);
+#endif
 #endif
             } else {
                 tok = TOK_CDOUBLE;
+#if HAVE_FLOAT
                 tokc.d = strtod(token_buf, NULL);
+#endif
             }
         }
     } else {

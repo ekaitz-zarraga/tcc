@@ -1043,6 +1043,7 @@ ST_FUNC void gen_cvt_itof(int t)
 /* convert fp to int 't' type */
 ST_FUNC void gen_cvt_ftoi(int t)
 {
+#if HAVE_FLOAT
     int bt = vtop->type.t & VT_BTYPE;
     if (bt == VT_FLOAT)
         vpush_global_sym(&func_old_type, TOK___fixsfdi);
@@ -1055,6 +1056,7 @@ ST_FUNC void gen_cvt_ftoi(int t)
     vpushi(0);
     vtop->r = REG_IRET;
     vtop->r2 = REG_LRET;
+#endif // HAVE_FLOAT
 }
 
 /* convert from one floating point type to another */
