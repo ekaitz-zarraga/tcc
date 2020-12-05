@@ -400,7 +400,11 @@ typedef union CValue {
         int size;
         const void *data;
     } str;
+#if BOOTSTRAP && __arm__
+    int tab[4];
+#else
     int tab[LDOUBLE_SIZE/4];
+#endif
 } CValue;
 
 /* value on stack */

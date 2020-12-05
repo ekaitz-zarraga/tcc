@@ -6174,6 +6174,15 @@ static int decl_designator(CType *type, Section *sec, unsigned long c,
     return al;
 }
 
+#if BOOTSTRAP && HAVE_FLOAT
+struct long_double
+{
+  int one;
+  int two;
+  int three;
+};
+#endif
+
 /* store a value or an expression directly in global data or in local array */
 static void init_putv(CType *type, Section *sec, unsigned long c)
 {
@@ -6284,18 +6293,42 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 		break;
 	    case VT_FLOAT:
 #if HAVE_FLOAT
+#if !(BOOTSTRAP && __arm__)
 		*(float*)ptr = vtop->c.f;
+#else
+                {
+                  long *lptr = ptr;
+                  *lptr = vtop->c.f;
+                }
+#endif
 #endif
 		break;
 	    case VT_DOUBLE:
 #if HAVE_FLOAT
+#if !(BOOTSTRAP && __arm__)
 		*(double *)ptr = vtop->c.d;
+#else
+                {
+                  long long *llptr = ptr;
+                  *llptr = vtop->c.d;
+                }
+#endif
 #endif
 		break;
 	    case VT_LDOUBLE:
 #if HAVE_FLOAT
                 if (sizeof(long double) == LDOUBLE_SIZE)
+#if !(BOOTSTRAP && __arm__)
 		    *(long double *)ptr = vtop->c.ld;
+#else
+                {
+                  // XXX TODO: breaks on mescc/mes-tcc based build
+                  // maybe disable with HAVE_LONG_DOUBLE?
+                  //struct long_double *ldptr = ptr;
+                  //struct long_double tmp = (struct long_double)vtop->c.ld;
+                  //*ldptr = (struct long_double)tmp;
+                }
+#endif
 		else if (sizeof(double) == LDOUBLE_SIZE)
 		    *(double *)ptr = (double)vtop->c.ld;
 #if (defined __i386__ || defined __x86_64__) && (defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64)
