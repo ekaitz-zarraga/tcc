@@ -225,20 +225,12 @@ void o(uint32_t i)
   if (ind1 > cur_text_section->data_allocated)
     section_realloc(cur_text_section, ind1);
   cur_text_section->data[ind++] = i&255;
-  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
-  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i&255;
-  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
-  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i&255;
-  trace ("o "); eputs (itoa (i&255)); eputs ("\n");
-  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
   i>>=8;
   cur_text_section->data[ind++] = i;
-  trace ("o "); eputs (itoa (i)); eputs ("\n");
-  trace ("o "); eputs (itoa (cur_text_section->data[ind-1])); eputs ("\n");
 }
 
 static uint32_t stuff_const(uint32_t op, uint32_t c)
@@ -297,11 +289,7 @@ static uint32_t stuff_const(uint32_t op, uint32_t c)
 //only add,sub
 void stuff_const_harder(uint32_t op, uint32_t v) {
   uint32_t x;
-
-  trace_enter ("stuff_const_harder");
-
   x=stuff_const(op,v);
-  trace ("stuff_const_harder x="); eputs (itoa (x)); eputs ("\n");
   if(x)
     o(x);
   else {
@@ -353,7 +341,6 @@ void stuff_const_harder(uint32_t op, uint32_t v) {
     o(stuff_const(o2,v&a[8]));
     o(stuff_const(o2,v&a[12]));
   }
-  trace_exit ("stuff_const_harder");
 }
 
 uint32_t encbranch(int pos, int addr, int fail)
@@ -759,14 +746,10 @@ static void gadd_sp(int val)
 static void gcall_or_jmp(int is_jmp)
 {
   int r;
-  trace_enter ("gcall_or_jmp");
-  trace ("gcall_or_jmp is_jmp="); eputs (itoa (is_jmp)); eputs ("\n");
   if ((vtop->r & (VT_VALMASK | VT_LVAL)) == VT_CONST) {
-    trace ("gcall_or_jmp 10\n")
     uint32_t x;
     /* constant case */
     x=encbranch(ind,ind+vtop->c.i,0);
-    trace ("gcall_or_jmp 20 x="); eputs (itoa (x)); eputs ("\n");
     if(x) {
       if (vtop->r & VT_SYM) {
 	/* relocation case */
@@ -777,11 +760,9 @@ static void gcall_or_jmp(int is_jmp)
       o(x|(is_jmp?0xE0000000:0xE1000000));
 #else
       x |= (is_jmp?0xE0000000:0xE1000000);
-      trace ("gcall_or_jmp 26 ="); eputs (itoa (x)); eputs ("\n");
       o(x);
 #endif
     } else {
-      trace ("gcall_or_jmp 30\n")
       if(!is_jmp)
 	o(0xE28FE004); // add lr,pc,#4
       o(0xE51FF004);   // ldr pc,[pc,#-4]
@@ -796,7 +777,6 @@ static void gcall_or_jmp(int is_jmp)
       o(0xE1A0E00F);       // mov lr,pc
     o(0xE1A0F000|intr(r)); // mov pc,r
   }
-  trace_exit ("gcall_or_jmp");
 }
 
 static int unalias_ldbl(int btype)
@@ -1278,8 +1258,6 @@ void gfunc_call(int nb_args)
   int todo;
   struct plan plan;
 
-  trace_enter ("gfunc_call");
-
 #ifdef TCC_ARM_EABI
   int variadic;
 
@@ -1432,7 +1410,6 @@ from_stack:
   last_itod_magic=0;
   leaffunc = 1;
   loc = 0;
-  trace_exit ("gfunc_call");
 }
 
 /* generate function epilog */

@@ -99,20 +99,14 @@ static unsigned long func_bound_ind;
 /* XXX: make it faster ? */
 ST_FUNC void g(int c)
 {
-    trace_enter ("g");
-    //trace ("gen o c="); eputs (itoab (c, 16)); eputs ("\n");
     int ind1;
-    if (nocode_wanted) {
-        trace_exit ("g");
+    if (nocode_wanted)
         return;
-    }
     ind1 = ind + 1;
     if (ind1 > cur_text_section->data_allocated)
         section_realloc(cur_text_section, ind1);
     cur_text_section->data[ind] = c;
-    //trace ("gen o data="); eputs (itoab (cur_text_section->data[ind], 16)); eputs ("\n");
     ind = ind1;
-    trace_exit ("g");
 }
 
 ST_FUNC void o(unsigned int c)
@@ -212,7 +206,6 @@ ST_FUNC void load(int r, SValue *sv)
     int v, t, ft, fc, fr;
     SValue v1;
 
-    trace_enter ("load");
 #ifdef TCC_TARGET_PE
     SValue v2;
     sv = pe_getimport(sv, &v2);
@@ -284,7 +277,6 @@ ST_FUNC void load(int r, SValue *sv)
             o(0xc0 + r + v * 8); /* mov v, r */
         }
     }
-    trace_exit ("load");
 }
 
 /* store register 'r' in lvalue 'v' */
@@ -292,7 +284,6 @@ ST_FUNC void store(int r, SValue *v)
 {
     int fr, bt, ft, fc;
 
-    trace_enter ("store");
 #ifdef TCC_TARGET_PE
     SValue v2;
     v = pe_getimport(v, &v2);
@@ -329,7 +320,6 @@ ST_FUNC void store(int r, SValue *v)
     } else if (fr != r) {
         o(0xc0 + fr + r * 8); /* mov r, fr */
     }
-    trace_exit ("store");
 }
 
 static void gadd_sp(int val)
@@ -440,7 +430,6 @@ ST_FUNC void gfunc_call(int nb_args)
     int size, align, r, args_size, i, func_call;
     Sym *func_sym;
     
-    trace_enter ("gfunc_call");
     args_size = 0;
     for(i = 0;i < nb_args; i++) {
         if ((vtop->type.t & VT_BTYPE) == VT_STRUCT) {
@@ -520,7 +509,6 @@ ST_FUNC void gfunc_call(int nb_args)
     if (args_size && func_call != FUNC_STDCALL)
         gadd_sp(args_size);
     vtop--;
-    trace_exit ("gfunc_call");
 }
 
 #ifdef TCC_TARGET_PE
@@ -538,40 +526,30 @@ ST_FUNC void gfunc_prolog(CType *func_type)
     Sym *sym;
     CType *type;
 
-    trace_enter ("gfunc_prolog");
     sym = func_type->ref;
     func_call = sym->a.func_call;
     addr = 8;
     loc = 0;
     func_vc = 0;
 
-    trace ("gfunc_prolog 10\n");
     if (func_call >= FUNC_FASTCALL1 && func_call <= FUNC_FASTCALL3) {
-        trace ("gfunc_prolog 11\n");
         fastcall_nb_regs = func_call - FUNC_FASTCALL1 + 1;
         fastcall_regs_ptr = fastcall_regs;
     } else if (func_call == FUNC_FASTCALLW) {
-        trace ("gfunc_prolog 15\n");
         fastcall_nb_regs = 2;
         fastcall_regs_ptr = fastcallw_regs;
     } else {
-        trace ("gfunc_prolog 18\n");
         fastcall_nb_regs = 0;
         fastcall_regs_ptr = NULL;
     }
     param_index = 0;
 
-    trace ("gfunc_prolog 20\n");
     ind += FUNC_PROLOG_SIZE;
-    trace ("gfunc_prolog 21\n");
     func_sub_sp_offset = ind;
-    trace ("gfunc_prolog 22\n");
     /* if the function returns a structure, then add an
        implicit pointer parameter */
     func_vt = sym->type;
-    trace ("gfunc_prolog 23\n");
     func_var = (sym->c == FUNC_ELLIPSIS);
-    trace ("gfunc_prolog 24\n");
 #ifdef TCC_TARGET_PE
     size = type_size(&func_vt,&align);
     if (((func_vt.t & VT_BTYPE) == VT_STRUCT)
@@ -579,35 +557,29 @@ ST_FUNC void gfunc_prolog(CType *func_type)
 #else
     if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
 #endif
-        trace ("gfunc_prolog 25\n");
         /* XXX: fastcall case ? */
         func_vc = addr;
         addr += 4;
         param_index++;
     }
-    trace ("gfunc_prolog 30\n");
     /* define parameters */
     while ((sym = sym->next) != NULL) {
-        trace ("gfunc_prolog 31 param_index="); eputs (itoa (param_index)); eputs ("\n");
         type = &sym->type;
         size = type_size(type, &align);
         size = (size + 3) & ~3;
 #ifdef FUNC_STRUCT_PARAM_AS_PTR
         /* structs are passed as pointer */
         if ((type->t & VT_BTYPE) == VT_STRUCT) {
-            trace ("gfunc_prolog 36\n");
             size = 4;
         }
 #endif
         if (param_index < fastcall_nb_regs) {
-            trace ("gfunc_prolog 38\n");
             /* save FASTCALL register */
             loc -= 4;
             o(0x89);     /* movl */
             gen_modrm(fastcall_regs_ptr[param_index], VT_LOCAL, NULL, loc);
             param_addr = loc;
         } else {
-            trace ("gfunc_prolog 39\n");
             param_addr = addr;
             addr += size;
         }
@@ -616,7 +588,6 @@ ST_FUNC void gfunc_prolog(CType *func_type)
         param_index++;
     }
     func_ret_sub = 0;
-    trace ("gfunc_prolog 50\n");
     /* pascal type call ? */
     if (func_call == FUNC_STDCALL)
         func_ret_sub = addr - 8;
@@ -625,18 +596,15 @@ ST_FUNC void gfunc_prolog(CType *func_type)
         func_ret_sub = 4;
 #endif
 
-    trace ("gfunc_prolog 60\n");
 #ifdef CONFIG_TCC_BCHECK
     /* leave some room for bound checking code */
     if (tcc_state->do_bounds_check) {
-        trace ("gfunc_prolog 61\n");
         func_bound_offset = lbounds_section->data_offset;
         func_bound_ind = ind;
         oad(0xb8, 0); /* lbound section pointer */
         oad(0xb8, 0); /* call to function */
     }
 #endif
-    trace_exit ("gfunc_prolog");
 }
 
 /* generate function epilog */
@@ -644,11 +612,9 @@ ST_FUNC void gfunc_epilog(void)
 {
     addr_t v, saved_ind;
 
-    trace ("gfunc_epilog\n");
 #ifdef CONFIG_TCC_BCHECK
     if (tcc_state->do_bounds_check
      && func_bound_offset != lbounds_section->data_offset) {
-        trace ("gfunc_epilog 01\n");
         addr_t saved_ind;
         addr_t *bounds_ptr;
         Sym *sym_data;
@@ -677,22 +643,18 @@ ST_FUNC void gfunc_epilog(void)
     }
 #endif
 
-    trace ("gfunc_epilog 20\n");
     /* align local size to word & save local variables */
     v = (-loc + 3) & -4;
 
 #if USE_EBX
-    trace ("gfunc_epilog 21\n");
     o(0x8b);
     gen_modrm(TREG_EBX, VT_LOCAL, NULL, -(v+4));
 #endif
 
     o(0xc9); /* leave */
     if (func_ret_sub == 0) {
-        trace ("gfunc_epilog 23\n");
         o(0xc3); /* ret */
     } else {
-        trace ("gfunc_epilog 24\n");
         o(0xc2); /* ret n */
         g(func_ret_sub);
         g(func_ret_sub >> 8);
@@ -706,7 +668,6 @@ ST_FUNC void gfunc_epilog(void)
     } else
 #endif
     {
-        trace ("gfunc_epilog 30\n");
         o(0xe58955);  /* push %ebp, mov %esp, %ebp */
         o(0xec81);  /* sub esp, stacksize */
         gen_le32(v);
@@ -798,8 +759,6 @@ ST_FUNC void gen_opi(int op)
 {
     int r, fr, opc, c;
 
-    trace_enter ("gen_opi");
-    trace ("gen_opi op="); eputs (itoa (op)); eputs ("\n");
     switch(op) {
     case '+':
     case TOK_ADDC1: /* add with carry generation */
@@ -823,7 +782,6 @@ ST_FUNC void gen_opi(int op)
                     g(c);
                 }
             } else {
-                trace ("gen_opi 20\n");
                 o(0x81);
                 oad(0xc0 | (opc << 3) | r, c);
             }
@@ -934,7 +892,6 @@ ST_FUNC void gen_opi(int op)
         opc = 7;
         goto gen_op8;
     }
-    trace_exit ("gen_opi");
 }
 
 /* generate a floating point operation 'v = t1 op t2' instruction. The
