@@ -214,8 +214,26 @@ REBUILD_LIBC=true
 TCC=$CC sh -x boot.sh
 REBUILD_LIBC=true
 TCC=./boot0-tcc sh boot.sh
+
+rm -rf ${cross_prefix}tcc-boot0
+mkdir -p ${cross_prefix}tcc-boot0
+cp *.a ${cross_prefix}tcc-boot0
+cp *.o ${cross_prefix}tcc-boot0
+
 TCC=./boot1-tcc sh boot.sh
+
+rm -rf ${cross_prefix}tcc-boot1
+mkdir -p ${cross_prefix}tcc-boot1
+cp *.a ${cross_prefix}tcc-boot1
+cp *.o ${cross_prefix}tcc-boot1
+
 TCC=./boot2-tcc sh boot.sh
+
+rm -rf ${cross_prefix}tcc-boot2
+mkdir -p ${cross_prefix}tcc-boot2
+cp *.a ${cross_prefix}tcc-boot2
+cp *.o ${cross_prefix}tcc-boot2
+
 TCC=./boot3-tcc sh boot.sh
 TCC=./boot4-tcc sh boot.sh
 TCC=./boot5-tcc sh boot.sh
