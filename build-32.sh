@@ -8,6 +8,16 @@ fi
 
 arch=$(uname -m)
 case $arch in
+     aarch*)
+         cpu=arm
+         mes_cpu=arm
+         tcc_cpu=arm
+         triplet=arm-linux-gnueabihf
+         cross_prefix=${triplet}-
+         have_float=${have_float-false}
+         have_long_long=${have_long_long-true}
+         have_setjmp=${have_setjmp-false}
+         ;;
      arm*|aarch)
          cpu=arm
          mes_cpu=arm
