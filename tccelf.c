@@ -1867,7 +1867,7 @@ static void tcc_output_elf(TCCState *s1, FILE *f, int phnum, ElfW(Phdr) *phdr,
     ehdr.e_ident[EI_OSABI] = ELFOSABI_FREEBSD;
 #endif
 #ifdef TCC_TARGET_ARM
-#ifdef TCC_ARM_EABI
+#if defined (TCC_ARM_EABI) || BOOTSTRAP
     ehdr.e_ident[EI_OSABI] = 0;
     ehdr.e_flags = EF_ARM_EABI_VER4;
     if (file_type == TCC_OUTPUT_EXE || file_type == TCC_OUTPUT_DLL)
