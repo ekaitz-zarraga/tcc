@@ -4762,15 +4762,31 @@ ST_FUNC void unary(void)
 
     // special qnan , snan and infinity values
     case TOK___NAN__:
+#if HAVE_LONG_LONG
         vpush64(VT_DOUBLE, 0x7ff8000000000000ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff80000);
+        vtop->c.i = vtop->c.i << 32;
+#endif
         next();
         break;
     case TOK___SNAN__:
+#if HAVE_LONG_LONG
         vpush64(VT_DOUBLE, 0x7ff0000000000001ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff00000);
+        vtop->c.i = vtop->c.i << 32;
+        vtop->c.i = vtop->c.i | 1;
+#endif
         next();
         break;
     case TOK___INF__:
+#if HAVE_LONG_LONG
         vpush64(VT_DOUBLE, 0x7ff0000000000000ULL);
+#else
+        vpush64(VT_DOUBLE, 0x7ff00000);
+        vtop->c.i = vtop->c.i << 32;
+#endif
         next();
         break;
 
