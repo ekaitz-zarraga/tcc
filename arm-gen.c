@@ -749,7 +749,12 @@ static void gcall_or_jmp(int is_jmp)
 	greloc(cur_text_section, vtop->sym, ind, R_ARM_PC24);
       } else
 	put_elf_reloc(symtab_section, cur_text_section, ind, R_ARM_PC24, 0);
+#if !BOOTSTRAP
       o(x|(is_jmp?0xE0000000:0xE1000000));
+#else
+      x |= (is_jmp?0xE0000000:0xE1000000);
+      o(x);
+#endif
     } else {
       if(!is_jmp)
 	o(0xE28FE004); // add lr,pc,#4
@@ -1468,7 +1473,12 @@ int gtst(int inv, int t)
   if (nocode_wanted) {
     ;
   } else if (v == VT_CMP) {
+#if !BOOTSTRAP
     op=mapcc(inv?negcc(vtop->c.i):vtop->c.i);
+#else
+    int tmp_arg = inv?negcc(vtop->c.i):vtop->c.i;
+    op=mapcc(tmp_arg);
+#endif
     op|=encbranch(r,t,1);
     o(op);
     t=r;
