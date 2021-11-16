@@ -1,0 +1,220 @@
+-*- mode: org; coding: utf-8; -*-
+
+* TODO
+  - Remove HACKs
+    + HACK bootstrappable: ARM: "tccpp_ok".
+    + HACK bootstrappable: ARM: "tccgen_ok".
+    + (bits of) bootstrappable: ARM: HAVE_FLOAT?
+  - fully support "setjmp" in Mes C Library, for tcc
+    + ./doit, build-32.sh, build.sh => have_setjmp=true
+  - integrate ARM ./bootstrap.sh build into commencement.scm
+    + build gcc-2.95.3 ...etc, etc.
+  - release GNU Mes 0.23
+
+* DONE
+  - ./bootstrap.sh produces boot5-tcc running on mes
+  - ./doit: produces a fixpoint compiler boot5-tcc that can build
+    tinycc-0.9.27
+  - integrate ARM ./bootstrap.sh build into commencement.scm
+    + GNU Guix: wip-arm-bootstrap builds tcc-boot0-next
+  - ./bootstrap.sh produces boot5-tcc
+  - enable floats for ARM
+    + doit, build-32.sh, build.sh => have_float=true
+    + figure out lib/libtcc1.c, lib/armeabi.c, mes-source/lib/libtcc1.c
+    + look at TCC_ARM_EABI=1, TCC_ARM_HARDFLOAT=1
+  - get floats to work/ get past boot3-tcc
+    + on x86, -D HAVE_FLOAT is used to build boot4-tcc with boot3-tcc,
+      doing (something like) this fails on arm
+      Bus Error in tccgen.c:6292
+  - mes-0.23.9: ./doit; ./check.sh =>
+    expect: 7
+    failed: 12
+    passed: 243
+    total:  255
+    FAILED: 12/255
+  - mes-0.23.8: ./doit; ./check.sh =>
+    expect: 7
+    failed: 12
+    passed: 243
+    total:  255
+    FAILED: 12/255
+  - mes-0.23.7: ./doit; ./check.sh =>
+    expect: 7
+    failed: 15
+    passed: 240
+    total:  255
+    FAILED: 15/255
+  - mes-0.23.7: ./doit; ./check.sh =>
+    expect: 7
+    failed: 16
+    passed: 239
+    total:  255
+    FAILED: 16/255
+
+    lib/tests/string/70-strchr.c: [FAIL]
+    lib/tests/scaffold/7u-double.c: [FAIL]
+    lib/tests/scaffold/70-ternary-arithmetic-argument.c: [FAIL]
+    lib/tests/setjmp/80-setjmp.c: [FAIL]
+    lib/tests/dirent/90-readdir.c: [FAIL]
+    lib/tests/io/90-stat.c: [FAIL]
+    lib/tests/mes/90-abtod.c: [FAIL]
+    lib/tests/mes/90-dtoab.c: [FAIL]
+    lib/tests/stdio/90-fseek.c: [FAIL]
+    lib/tests/stdio/90-sprintf.c: [FAIL]
+    tests/tests2/22_floating_point.c: [FAIL]
+    tests/tests2/23_type_coercion.c: [FAIL]
+    tests/tests2/24_math_library.c: [FAIL]
+    tests/tests2/34_array_assignment.c: [FAIL]
+    tests/tests2/49_bracket_evaluation.c: [FAIL]
+    tests/tests2/55_lshift_type.c: [FAIL]
+    FAILED: 16/255
+
+    On x86, for mes-tcc we get
+    expect: 6
+    failed: 12
+    passed: 243
+    total:  255
+    FAILED: 12/255
+
+    $ diff -u check.x86 check.arm | grep ^+
+    +++ check.arm	2020-11-29 09:37:46.347431787 +0100
+    +lib/tests/scaffold/t.c: [OK]
+    +lib/tests/scaffold/7u-double.c: [FAIL]
+    +lib/tests/setjmp/80-setjmp.c: [FAIL]
+    +lib/tests/mes/90-abtod.c: [FAIL]
+    +lib/tests/mes/90-dtoab.c: [FAIL]
+    +lib/tests/stdio/90-sprintf.c: [FAIL]
+  - (possibly ???) drop lib/armeabi.c in favor of new GNU Mes fast divisors
+  - mes-tcc can be bootstrapped, build and and rebuild itself, until
+    boot6-tcc, with long longs.
+  - get long longs to work/ get past boot3-tcc
+    + on x86, -D HAVE_LONG_LONG is used to build boot3-tcc with boot2-tcc,
+      this fails on arm
+    + ./boot3-tcc -c -o boot3-crt1.o crt1.c Segfaults:
+      gdb boot3-tcc
+      (gdb) r  -c -o boot3-crt1.o crt1.c
+      Starting program: /home/janneke/src/tinycc/boot3-tcc -c -o boot3-crt1.o crt1.c
+
+      Program received signal SIGSEGV, Segmentation fault.
+      0x000468e8 in memcpy (dest=0x647e8, src=0x4be10 <tcc_keywords>, n=4293126118) at ../lib/string/memcpy.c:30
+      30	    *p++ = *q++;
+      (gdb) bt
+      #0  0x000468e8 in memcpy (dest=0x647e8, src=0x4be10 <tcc_keywords>, n=4293126118) at ../lib/string/memcpy.c:30
+      #1  0x00009004 in tok_alloc_new () at tccpp.c:437
+      #2  0x000647cc in ?? ()
+      Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+      (gdb)
+    + ./doit now has: ONE_SOURCE=false
+    + ./doit now has: bootX-tcc are "bootstrapped" with gcc-built tcc
+      HACK bootstrap with arm-unknown-linux-gnueabihf-gcc.
+    + bisect/substitute tcc*.o files ?
+  - mes-tcc can be bootstrapped, build and and rebuild itself, until boot6-tcc
+    but that is without -D HAVE_LONG_LONG, -D HAVE_FLOAT!
+  - crt1.c bootstrap problem
+    + remove crt1.S and "cp" hacks
+    + rewrite crt1.c, _exit.c, _write.c, syscall.c, setjmp.c.
+    + Allow inline fake __asm__.
+    + crt1.c uses "fake" __asm__:
+       .global _start;
+       _start:
+       .int 0x....., but is broken
+      - possibly add something like
+         .text
+         .type	_start, %function
+         .type	main, %function
+    + # XXX tcc: error: _start not defined
+    + Remove HACK: do not rebuild crt1.o
+  - lib/tests/stdio/90-fopen-append.c reads form stdin/terminal !?
+HACK ARM: tcc.h: Add dummies for arm-unknown-linux-gnueabihf-tcc (-fpack-struct??).
+  - ./doit: boot0-tcc cannot build boot1-tcc (segfaults currently)
+./boot0-tcc -g -v -static -o boot1-tcc -D BOOTSTRAP=1 -D HAVE_BITFIELD=1 -D HAVE_FLOAT_STUB=1 -I . -I mes-source/lib -I mes-source/include -D inline= -D CONFIG_TCCDIR="usr/lib/tcc" -D CONFIG_TCC_CRTPREFIX="usr/lib:{B}/lib:." -D CONFIG_TCC_ELFINTERP="/lib/mes-loader" -D CONFIG_TCC_LIBPATHS="usr/lib:{B}/lib:." -D CONFIG_TCC_SYSINCLUDEPATHS="mes-source/include:usr/include:{B}/include" -D TCC_LIBGCC="usr/lib/libc.a" -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_MES_LIBC=1 -D TCC_TARGET_ARM=1 -D ONE_SOURCE=1 -L . tcc.c -ltcc1
+Segmentation fault (core dumped)
+  - gcc-built arm-linux-gnueabihf-tcc builds a defective boot0-tcc
+    + ./doit: enable ONE_SOURCE=false
+    + build-32.sh: build boot0-tcc with arm-unknown-linux-gnueabihf-gcc   OK
+    + build boot0-tcc with ./arm-unknown-linux-gnueabihf-tcc FAILS:
+      V=2 ./doit => segfaults building crt1.o with boot0-tcc
+      ./boot0-tcc -c -g -D TCC_TARGET_ARM=1 -o libtcc1.o lib/libtcc1.c
+      boot.sh: line 193: 16311 Illegal instruction     (core dumped) ./${program_prefix}tcc -c -g $CPP_TARGET_FLAG -o libtcc1.o lib/libtcc1.c
+      [132]16:13:50 janneke@banana:~/src/tinycc [env]
+      $ gdb ./boot0-tcc
+      GNU gdb (Ubuntu 7.11.1-0ubuntu1~16.5) 7.11.1
+      Copyright (C) 2016 Free Software Foundation, Inc.
+      License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+      This is free software: you are free to change and redistribute it.
+      There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+      and "show warranty" for details.
+      This GDB was configured as "arm-linux-gnueabihf".
+      Type "show configuration" for configuration details.
+      For bug reporting instructions, please see:
+      <http://www.gnu.org/software/gdb/bugs/>.
+      Find the GDB manual and other documentation resources online at:
+      <http://www.gnu.org/software/gdb/documentation/>.
+      For help, type "help".
+      Type "apropos word" to search for commands related to "word"...
+      Reading symbols from ./boot0-tcc...done.
+      (gdb) r  -c -g -D TCC_TARGET_ARM=1 -o libtcc1.o lib/libtcc1.c
+      Starting program: /home/janneke/src/tinycc/boot0-tcc -c -g -D TCC_TARGET_ARM=1 -o libtcc1.o lib/libtcc1.c
+
+      Program received signal SIGILL, Illegal instruction.
+      0x00041cb0 in abtod ()
+      (gdb) bt
+      #0  0x00041cb0 in abtod ()
+      #1  0x00000000 in ?? ()
+      Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+      - mescc-built mes-tcc builds a defective boot0-tcc
+      V=2 ./doit => segfaults building crt1.o with boot0-tcc
+      ./boot0-tcc -c -o boot0-crt1.o crt1.c
+      boot.sh: line 141: 12541 Segmentation fault      (core dumped)
+      ./${program_prefix}tcc -c -o ${program_prefix}crt$i.o crt$i.c
+  - remove setjmp hack
+  - remove /,% kludge in mes ntoab:
+"REVERTME mescc: Mes C Library: ntoab: Also use __mesabi_uldiv for TinyCC."
+    + this "fixes" division for itoa, but any div/mod elswere will still be broken
+      - tcc*.c
+      - mes C library?
+  - tcc cannot build inline asm:
+    + ctr1.c
+      - figure-out how to compile crt1.c using tcc without
+        [inline]assembly
+      - can we create it with mescc, for tcc, using M1 only?
+    + libc.c: includes mini.c, syscall.c, setjmp.c
+  - fix and use (unrevert) "build-32.sh: build more -- breaks!"
+This patch seeks to rebuild crt*, libc* for the gcc-built
+arm-unknown-linux-gnueabihf-tcc, instead of copying prebuilt gcc ones
+  - avoid STUBS ./boot0-tcc -g -v -static -o boot1-tcc -D BOOTSTRAP=1 -D HAVE_BITFIELD=1 -D HAVE_FLOAT_STUB=1 -I . -I mes-source/lib -I mes-source/include -D inline= -D 'CONFIG_TCCDIR="usr/lib/tcc"' -D 'CONFIG_TCC_CRTPREFIX="usr/lib:{B}/lib:."' -D 'CONFIG_TCC_ELFINTERP="/lib/mes-loader"' -D 'CONFIG_TCC_LIBPATHS="usr/lib:{B}/lib:."' -D 'CONFIG_TCC_SYSINCLUDEPATHS="mes-source/include:usr/include:{B}/include"' -D 'TCC_LIBGCC="usr/lib/libc.a"' -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_MES_LIBC=1 -D TCC_TARGET_ARM=1 -D ONE_SOURCE=1 -L . tcc.c -ltcc1
+tcc version 0.9.27 (ARM Linux)
+-> tcc.c
+__udivdi3 stub
+__ashldi3 stub
+  - fix mes-tcc miscompilation of test-compare.c
+Try:
+
+   gcc test-compare.c
+   ./a.out
+
+(ok)
+
+   V=2 ./doit
+
+   cp mes-source/lib/string/memcpy.c . # temp hack, dunno why
+  ./arm-unknown-linux-gnueabihf-tcc -v -v -I mes/include -L . -c -o memcpy.o memcpy.c
+  ./arm-unknown-linux-gnueabihf-tcc -v -v -I mes/include -L . test-compare.c memcpy.o
+  ./a.out
+
+(ok)
+
+  ./mes-tcc -v -v -I mes/include -L . test-compare.c memcpy.o
+  ./a.out
+
+=> 1
+  - remove 'REBUILD_LIB= ', export REBUILD_LIBC from doit
+this flag uses (copies) the gcc-built crt*, libc* from a prebuilt mes,
+from local symlink ./mes
+  - mes-tcc can build a simple, runnable program
+  21:55:01 janneke@banana:~/src/tinycc [env]
+$ ./mes-tcc-hello
+Hello, Mescc!
+[42]
+  - mes-tcc can compile a simple main
+  - mescc can build mes-tcc
