@@ -780,6 +780,8 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s, "__STDC_VERSION__", "199901L");
     tcc_define_symbol(s, "__STDC_HOSTED__", NULL);
 
+    tcc_define_symbol(s, "__SIZEOF_LONG_LONG__", "8");
+
     /* target defines */
 #if defined(TCC_TARGET_I386)
     tcc_define_symbol(s, "__i386__", NULL);

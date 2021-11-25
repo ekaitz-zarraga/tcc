@@ -390,7 +390,12 @@ typedef union CValue {
     long double ld;
     double d;
     float f;
+#if HAVE_LONG_LONG
     uint64_t i;
+#else
+    uint32_t i;
+    uint32_t i_padding;
+#endif
     struct {
         int size;
         const void *data;
@@ -606,7 +611,12 @@ typedef struct CachedInclude {
 
 #ifdef CONFIG_TCC_ASM
 typedef struct ExprValue {
+#if HAVE_LONG_LONG
     uint64_t v;
+#else
+    uint32_t v;
+    uint32_t v_padding;
+#endif
     Sym *sym;
     int pcrel;
 } ExprValue;
@@ -1516,6 +1526,7 @@ static inline void write32le(unsigned char *p, uint32_t x) {
 static inline void add32le(unsigned char *p, int32_t x) {
     write32le(p, read32le(p) + x);
 }
+#if HAVE_LONG_LONG
 static inline uint64_t read64le(unsigned char *p) {
   return read32le(p) | (uint64_t)read32le(p + 4) << 32;
 }
@@ -1525,7 +1536,7 @@ static inline void write64le(unsigned char *p, uint64_t x) {
 static inline void add64le(unsigned char *p, int64_t x) {
     write64le(p, read64le(p) + x);
 }
-
+#endif
 /* ------------ i386-gen.c ------------ */
 #if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
 ST_FUNC void g(int c);

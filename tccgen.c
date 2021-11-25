@@ -64,7 +64,11 @@ ST_DATA CType char_pointer_type, func_old_type, int_type, size_type;
 
 ST_DATA struct switch_t {
     struct case_t {
+#if HAVE_LONG_LONG
         int64_t v1, v2;
+#else
+      int32_t v1, v1_padding, v2, v2_padding;
+#endif
 	int sym;
     } **p; int n; /* list of case ranges */
     int def_sym; /* default symbol */
@@ -88,8 +92,12 @@ static void vla_runtime_type_size(CType *type, int *a);
 static void vla_sp_restore(void);
 static void vla_sp_restore_root(void);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
+#if HAVE_LONG_LONG
 static inline int64_t expr_const64(void);
 ST_FUNC void vpush64(int ty, unsigned long long v);
+#else
+static inline int32_t expr_const32(void);
+#endif
 ST_FUNC void vpush(CType *type);
 ST_FUNC int gvtst(int inv, int t);
 ST_FUNC int is_btype_size(int bt);
@@ -1302,7 +1310,9 @@ static void lexpand(void)
     v = vtop->r & (VT_VALMASK | VT_LVAL);
     if (v == VT_CONST) {
         vdup();
+#if HAVE_LONG_LONG
         vtop[0].c.i >>= 32;
+#endif
     } else if (v == (VT_LVAL|VT_CONST) || v == (VT_LVAL|VT_LOCAL)) {
         vdup();
         vtop[0].c.i += 4;
@@ -1329,7 +1339,9 @@ ST_FUNC void lexpand_nr(void)
     v=vtop[-1].r & (VT_VALMASK | VT_LVAL);
     if (v == VT_CONST) {
       vtop[-1].c.i = vtop->c.i;
+#if HAVE_LONG_LONG
       vtop->c.i = vtop->c.i >> 32;
+#endif
       vtop->r = VT_CONST;
     } else if (v == (VT_LVAL|VT_CONST) || v == (VT_LVAL|VT_LOCAL)) {
       vtop->c.i += 4;
@@ -1654,6 +1666,7 @@ static void gen_opl(int op)
 }
 #endif
 
+#if HAVE_LONG_LONG
 static uint64_t gen_opic_sdiv(uint64_t a, uint64_t b)
 {
     uint64_t x = (a >> 63 ? -a : a) / (b >> 63 ? -b : b);
@@ -1664,6 +1677,18 @@ static int gen_opic_lt(uint64_t a, uint64_t b)
 {
     return (a ^ (uint64_t)1 << 63) < (b ^ (uint64_t)1 << 63);
 }
+#else
+static uint32_t gen_opic_sdiv(uint32_t a, uint32_t b)
+{
+    uint32_t x = (a >> 31 ? -a : a) / (b >> 31 ? -b : b);
+    return (a ^ b) >> 31 ? -x : x;
+}
+
+static int gen_opic_lt(uint32_t a, uint32_t b)
+{
+    return (a ^ (uint32_t)1 << 31) < (b ^ (uint32_t)1 << 31);
+}
+#endif
 
 /* handle integer constant optimizations and various machine
    independent opt */
@@ -1675,10 +1700,15 @@ static void gen_opic(int op)
     int t2 = v2->type.t & VT_BTYPE;
     int c1 = (v1->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
     int c2 = (v2->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
+#if HAVE_LONG_LONG
     uint64_t l1 = c1 ? v1->c.i : 0;
     uint64_t l2 = c2 ? v2->c.i : 0;
     int shm = (t1 == VT_LLONG) ? 63 : 31;
-
+#else
+    uint32_t l1 = c1 ? v1->c.i : 0;
+    uint32_t l2 = c2 ? v2->c.i : 0;
+    int shm = 31;
+#endif
     if (t1 != VT_LLONG && (PTR_SIZE != 8 || t1 != VT_PTR))
         l1 = ((uint32_t)l1 |
               (v1->type.t & VT_UNSIGNED ? 0 : -(l1 & 0x80000000)));
@@ -1716,7 +1746,11 @@ static void gen_opic(int op)
         case TOK_SHL: l1 <<= (l2 & shm); break;
         case TOK_SHR: l1 >>= (l2 & shm); break;
         case TOK_SAR:
+#if HAVE_LONG_LONG
             l1 = (l1 >> 63) ? ~(~l1 >> (l2 & shm)) : l1 >> (l2 & shm);
+#else
+            l1 = (l1 >> 31) ? ~(~l1 >> (l2 & shm)) : l1 >> (l2 & shm);
+#endif
             break;
             /* tests */
         case TOK_ULT: l1 = l1 < l2; break;
@@ -4538,10 +4572,18 @@ ST_FUNC void unary(void)
         break;
     case TOK_builtin_choose_expr:
 	{
+#if HAVE_LONG_LONG
 	    int64_t c;
+#else
+	    int32_t c;
+#endif
 	    next();
 	    skip('(');
+#if HAVE_LONG_LONG
 	    c = expr_const64();
+#else
+	    c = expr_const32();
+#endif
 	    skip(',');
 	    if (!c) {
 		nocode_wanted++;
@@ -5348,6 +5390,7 @@ static void expr_const1(void)
     const_wanted--;
 }
 
+#if HAVE_LONG_LONG
 /* parse an integer constant and return its value. */
 static inline int64_t expr_const64(void)
 {
@@ -5359,13 +5402,30 @@ static inline int64_t expr_const64(void)
     vpop();
     return c;
 }
+#else
+/* parse an integer constant and return its value. */
+static inline int32_t expr_const32(void)
+{
+    int32_t c;
+    expr_const1();
+    if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) != VT_CONST)
+        expect("constant expression");
+    c = vtop->c.i;
+    vpop();
+    return c;
+}
+#endif
 
 /* parse an integer constant and return its value.
    Complain if it doesn't fit 32bit (signed or unsigned).  */
 ST_FUNC int expr_const(void)
 {
     int c;
+#if HAVE_LONG_LONG
     int64_t wc = expr_const64();
+#else
+    int32_t wc = expr_const32();
+#endif
     c = wc;
     if (c != wc && (unsigned)c != wc)
         tcc_error("constant exceeds 32 bit");
@@ -5460,8 +5520,13 @@ static void gfunc_return(CType *func_type)
 
 static int case_cmp(const void *pa, const void *pb)
 {
+#if HAVE_LONG_LONG
     int64_t a = (*(struct case_t**) pa)->v1;
     int64_t b = (*(struct case_t**) pb)->v1;
+#else
+    int32_t a = (*(struct case_t**) pa)->v1;
+    int32_t b = (*(struct case_t**) pb)->v1;
+#endif
     return a < b ? -1 : a > b;
 }
 
@@ -5786,10 +5851,18 @@ static void block(int *bsym, int *csym, int is_expr)
             expect("switch");
 	nocode_wanted &= ~0x20000000;
         next();
+#if HAVE_LONG_LONG
         cr->v1 = cr->v2 = expr_const64();
+#else
+        cr->v1 = cr->v2 = expr_const32();
+#endif
         if (gnu_ext && tok == TOK_DOTS) {
             next();
+#if HAVE_LONG_LONG
             cr->v2 = expr_const64();
+#else
+            cr->v2 = expr_const32();
+#endif
             if (cr->v2 < cr->v1)
                 tcc_warning("empty case range");
         }

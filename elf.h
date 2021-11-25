@@ -27,11 +27,15 @@
 typedef signed char int8_t;
 typedef short int int16_t;
 typedef int int32_t;
+#if HAVE_LONG_LONG
 typedef long long int int64_t;
+#endif
 typedef unsigned char           uint8_t;
 typedef unsigned short int      uint16_t;
 typedef unsigned int            uint32_t;
+#if HAVE_LONG_LONG
 typedef unsigned long long int  uint64_t;
+#endif
 #endif
 #endif
 
@@ -47,19 +51,25 @@ typedef	int32_t  Elf32_Sword;
 typedef uint32_t Elf64_Word;
 typedef	int32_t  Elf64_Sword;
 
+#if HAVE_LONG_LONG
 /* Types for signed and unsigned 64-bit quantities.  */
 typedef uint64_t Elf32_Xword;
 typedef	int64_t  Elf32_Sxword;
 typedef uint64_t Elf64_Xword;
 typedef	int64_t  Elf64_Sxword;
+#endif
 
 /* Type of addresses.  */
 typedef uint32_t Elf32_Addr;
+#if HAVE_LONG_LONG
 typedef uint64_t Elf64_Addr;
+#endif
 
 /* Type of file offsets.  */
 typedef uint32_t Elf32_Off;
+#if HAVE_LONG_LONG
 typedef uint64_t Elf64_Off;
+#endif
 
 /* Type for section indices, which are 16-bit quantities.  */
 typedef uint16_t Elf32_Section;
@@ -67,8 +77,9 @@ typedef uint16_t Elf64_Section;
 
 /* Type for version symbol information.  */
 typedef Elf32_Half Elf32_Versym;
+#if HAVE_LONG_LONG
 typedef Elf64_Half Elf64_Versym;
-
+#endif
 
 /* The ELF file header.  This appears at the start of every ELF file.  */
 
@@ -92,6 +103,7 @@ typedef struct
   Elf32_Half	e_shstrndx;		/* Section header string table index */
 } Elf32_Ehdr;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   unsigned char	e_ident[EI_NIDENT];	/* Magic number and other info */
@@ -109,6 +121,7 @@ typedef struct
   Elf64_Half	e_shnum;		/* Section header table entry count */
   Elf64_Half	e_shstrndx;		/* Section header string table index */
 } Elf64_Ehdr;
+#endif
 
 /* Fields in the e_ident array.  The EI_* macros are indices into the
    array.  The macros under each EI_* macro are the values the byte
@@ -293,6 +306,7 @@ typedef struct
   Elf32_Word	sh_entsize;		/* Entry size if section holds table */
 } Elf32_Shdr;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word	sh_name;		/* Section name (string tbl index) */
@@ -306,6 +320,7 @@ typedef struct
   Elf64_Xword	sh_addralign;		/* Section alignment */
   Elf64_Xword	sh_entsize;		/* Entry size if section holds table */
 } Elf64_Shdr;
+#endif
 
 /* Special section indices.  */
 
@@ -399,6 +414,7 @@ typedef struct
   Elf32_Section	st_shndx;		/* Section index */
 } Elf32_Sym;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word	st_name;		/* Symbol name (string tbl index) */
@@ -408,6 +424,7 @@ typedef struct
   Elf64_Addr	st_value;		/* Symbol value */
   Elf64_Xword	st_size;		/* Symbol size */
 } Elf64_Sym;
+#endif
 
 /* The syminfo section if available contains additional information about
    every dynamic symbol.  */
@@ -418,11 +435,13 @@ typedef struct
   Elf32_Half si_flags;			/* Per symbol flags */
 } Elf32_Syminfo;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Half si_boundto;		/* Direct bindings, symbol bound to */
   Elf64_Half si_flags;			/* Per symbol flags */
 } Elf64_Syminfo;
+#endif
 
 /* Possible values for si_boundto.  */
 #define SYMINFO_BT_SELF		0xffff	/* Symbol bound to self */
@@ -510,6 +529,7 @@ typedef struct
   Elf32_Word	r_info;			/* Relocation type and symbol index */
 } Elf32_Rel;
 
+#if HAVE_LONG_LONG
 /* I have seen two different definitions of the Elf64_Rel and
    Elf64_Rela structures, so we'll leave them out until Novell (or
    whoever) gets their act together.  */
@@ -520,6 +540,7 @@ typedef struct
   Elf64_Addr	r_offset;		/* Address */
   Elf64_Xword	r_info;			/* Relocation type and symbol index */
 } Elf64_Rel;
+#endif
 
 /* Relocation table entry with addend (in section of type SHT_RELA).  */
 
@@ -530,12 +551,14 @@ typedef struct
   Elf32_Sword	r_addend;		/* Addend */
 } Elf32_Rela;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Addr	r_offset;		/* Address */
   Elf64_Xword	r_info;			/* Relocation type and symbol index */
   Elf64_Sxword	r_addend;		/* Addend */
 } Elf64_Rela;
+#endif
 
 /* How to extract and insert information held in the r_info field.  */
 
@@ -561,6 +584,7 @@ typedef struct
   Elf32_Word	p_align;		/* Segment alignment */
 } Elf32_Phdr;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word	p_type;			/* Segment type */
@@ -572,6 +596,7 @@ typedef struct
   Elf64_Xword	p_memsz;		/* Segment size in memory */
   Elf64_Xword	p_align;		/* Segment alignment */
 } Elf64_Phdr;
+#endif
 
 /* Special value for e_phnum.  This indicates that the real number of
    program headers is too large to fit into e_phnum.  Instead the real
@@ -665,6 +690,7 @@ typedef struct
     } d_un;
 } Elf32_Dyn;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Sxword	d_tag;			/* Dynamic entry type */
@@ -674,6 +700,7 @@ typedef struct
       Elf64_Addr d_ptr;			/* Address value */
     } d_un;
 } Elf64_Dyn;
+#endif
 
 /* Legal values for d_tag (dynamic entry type).  */
 
@@ -843,6 +870,7 @@ typedef struct
 					   entry */
 } Elf32_Verdef;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Half	vd_version;		/* Version revision */
@@ -854,7 +882,7 @@ typedef struct
   Elf64_Word	vd_next;		/* Offset in bytes to next verdef
 					   entry */
 } Elf64_Verdef;
-
+#endif
 
 /* Legal values for vd_version (version revision).  */
 #define VER_DEF_NONE	0		/* No version */
@@ -880,13 +908,14 @@ typedef struct
 					   entry */
 } Elf32_Verdaux;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word	vda_name;		/* Version or dependency names */
   Elf64_Word	vda_next;		/* Offset in bytes to next verdaux
 					   entry */
 } Elf64_Verdaux;
-
+#endif
 
 /* Version dependency section.  */
 
@@ -901,6 +930,7 @@ typedef struct
 					   entry */
 } Elf32_Verneed;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Half	vn_version;		/* Version of structure */
@@ -911,7 +941,7 @@ typedef struct
   Elf64_Word	vn_next;		/* Offset in bytes to next verneed
 					   entry */
 } Elf64_Verneed;
-
+#endif
 
 /* Legal values for vn_version (version revision).  */
 #define VER_NEED_NONE	 0		/* No version */
@@ -930,6 +960,7 @@ typedef struct
 					   entry */
 } Elf32_Vernaux;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word	vna_hash;		/* Hash value of dependency name */
@@ -939,7 +970,7 @@ typedef struct
   Elf64_Word	vna_next;		/* Offset in bytes to next vernaux
 					   entry */
 } Elf64_Vernaux;
-
+#endif
 
 /* Legal values for vna_flags.  */
 #define VER_FLG_WEAK	0x2		/* Weak version identifier */
@@ -966,6 +997,7 @@ typedef struct
     } a_un;
 } Elf32_auxv_t;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   uint64_t a_type;		/* Entry type */
@@ -977,6 +1009,7 @@ typedef struct
 	 on 64-bit platforms and vice versa.  */
     } a_un;
 } Elf64_auxv_t;
+#endif
 
 /* Legal values for a_type (entry type).  */
 
@@ -1045,12 +1078,14 @@ typedef struct
   Elf32_Word n_type;			/* Type of the note.  */
 } Elf32_Nhdr;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word n_namesz;			/* Length of the note's name.  */
   Elf64_Word n_descsz;			/* Length of the note's descriptor.  */
   Elf64_Word n_type;			/* Type of the note.  */
 } Elf64_Nhdr;
+#endif
 
 /* Known names of notes.  */
 
@@ -1104,13 +1139,18 @@ typedef struct
 /* Move records.  */
 typedef struct
 {
+#if HAVE_LONG_LONG
   Elf32_Xword m_value;		/* Symbol value.  */
+#else
   Elf32_Word m_info;		/* Size and index.  */
+  Elf32_Word m_info_padding;
+#endif  
   Elf32_Word m_poffset;		/* Symbol offset.  */
   Elf32_Half m_repeat;		/* Repeat count.  */
   Elf32_Half m_stride;		/* Stride info.  */
 } Elf32_Move;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Xword m_value;		/* Symbol value.  */
@@ -1119,6 +1159,7 @@ typedef struct
   Elf64_Half m_repeat;		/* Repeat count.  */
   Elf64_Half m_stride;		/* Stride info.  */
 } Elf64_Move;
+#endif
 
 /* Macro to construct move records.  */
 #define ELF32_M_SYM(info)	((info) >> 8)
@@ -1732,6 +1773,7 @@ typedef struct
   Elf32_Word l_flags;		/* Flags */
 } Elf32_Lib;
 
+#if HAVE_LONG_LONG
 typedef struct
 {
   Elf64_Word l_name;		/* Name (string table index) */
@@ -1740,7 +1782,7 @@ typedef struct
   Elf64_Word l_version;		/* Interface version */
   Elf64_Word l_flags;		/* Flags */
 } Elf64_Lib;
-
+#endif
 
 /* Legal values for l_flags.  */
 

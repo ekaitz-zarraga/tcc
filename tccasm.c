@@ -90,7 +90,11 @@ static void asm_expr_unary(TCCState *s1, ExprValue *pe)
 {
     Sym *sym;
     int op, label;
+#if HAVE_LONG_LONG
     uint64_t n;
+#else
+    uint32_t n;
+#endif
     const char *p;
 
     switch(tok) {
@@ -324,6 +328,7 @@ static inline void asm_expr_cmp(TCCState *s1, ExprValue *pe)
 	case TOK_NE:
 	    pe->v = pe->v != e2.v;
 	    break;
+#if HAVE_LONG_LONG
 	case TOK_LT:
 	    pe->v = (int64_t)pe->v < (int64_t)e2.v;
 	    break;
@@ -336,11 +341,29 @@ static inline void asm_expr_cmp(TCCState *s1, ExprValue *pe)
 	case TOK_GT:
 	    pe->v = (int64_t)pe->v > (int64_t)e2.v;
 	    break;
+#else
+	case TOK_LT:
+	    pe->v = (int32_t)pe->v < (int32_t)e2.v;
+	    break;
+	case TOK_GE:
+	    pe->v = (int32_t)pe->v >= (int32_t)e2.v;
+	    break;
+	case TOK_LE:
+	    pe->v = (int32_t)pe->v <= (int32_t)e2.v;
+	    break;
+	case TOK_GT:
+	    pe->v = (int32_t)pe->v > (int32_t)e2.v;
+	    break;
+#endif
         default:
             break;
         }
+#if HAVE_LONG_LONG
 	/* GAS compare results are -1/0 not 1/0.  */
 	pe->v = -(int64_t)pe->v;
+#else
+	pe->v = -(int32_t)pe->v;
+#endif
     }
 }
 
@@ -522,7 +545,11 @@ static void asm_parse_directive(TCCState *s1, int global)
 #else
         next();
         for(;;) {
+#if HAVE_LONG_LONG
             uint64_t vl;
+#else
+            uint32_t vl;
+#endif
             const char *p;
 
             p = tokc.str.data;
@@ -537,7 +564,9 @@ static void asm_parse_directive(TCCState *s1, int global)
             if (sec->sh_type != SHT_NOBITS) {
                 /* XXX: endianness */
                 gen_le32(vl);
+#if HAVE_LONG_LONG
                 gen_le32(vl >> 32);
+#endif
             } else {
                 ind += 8;
             }
