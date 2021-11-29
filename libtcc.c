@@ -629,7 +629,11 @@ static int tcc_compile(TCCState *s1)
     Sym *define_start;
 
     define_start = define_stack;
+#if HAVE_SETJMP
     if (setjmp(s1->error_jmp_buf) == 0) {
+#else
+    if (1) {
+#endif
         s1->nb_errors = 0;
         s1->error_set_jmp_enabled = 1;
 
