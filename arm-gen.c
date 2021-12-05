@@ -1689,6 +1689,7 @@ done:
 #ifdef TCC_ARM_VFP
 static int is_zero(int i)
 {
+#if HAVE_FLOAT
   if((vtop[i].r & (VT_VALMASK | VT_LVAL | VT_SYM)) != VT_CONST)
     return 0;
   if (vtop[i].type.t == VT_FLOAT)
@@ -1696,6 +1697,9 @@ static int is_zero(int i)
   else if (vtop[i].type.t == VT_DOUBLE)
     return (vtop[i].c.d == 0.0);
   return (vtop[i].c.ld == 0.l);
+#else
+  return 0;
+#endif
 }
 
 /* generate a floating point operation 'v = t1 op t2' instruction. The
