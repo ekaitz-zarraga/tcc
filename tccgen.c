@@ -709,6 +709,7 @@ static void vsetc(CType *type, int r, CValue *vc)
     trace ("vsetc r="); eputs (itoa (r)); eputs ("\n");
     trace ("vsetc vc->i="); eputs (itoa (vc->i)); eputs ("\n");
     trace ("vsetc vc->str.size="); eputs (itoa (vc->str.size)); eputs ("\n");
+    trace ("vsetc vc->f="); eputs (itoa (vc->f)); eputs ("\n");
     trace ("vsetc vtop->r="); eputs (itoa (vtop->r)); eputs ("\n");
     trace ("vsetc vtop->type.t="); eputs (itoa (vtop->type.t)); eputs ("\n");
     trace ("vsetc vtop->r2="); eputs (itoa (vtop->r2)); eputs ("\n");
@@ -7243,9 +7244,9 @@ static void gen_function(Sym *sym)
     char *name;
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
 
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
@@ -7261,18 +7262,18 @@ static void gen_function(Sym *sym)
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     funcname = get_tok_str(sym->v, NULL);
     trace ("gen_function 04 funcname="); eputs (funcname); eputs ("\n");
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     func_ind = ind;
     /* Initialize VLA state */
@@ -7290,9 +7291,9 @@ static void gen_function(Sym *sym)
     trace ("gen_function 10\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     /* push a dummy symbol to enable local sym storage */
     sym_push2(&local_stack, SYM_FIELD, 0, 0);
@@ -7300,18 +7301,18 @@ static void gen_function(Sym *sym)
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     local_scope = 1; /* for function parameters */
     gfunc_prolog(&sym->type);
     trace ("gen_function 13\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     local_scope = 0;
     rsym = 0;
@@ -7319,9 +7320,9 @@ static void gen_function(Sym *sym)
     trace ("gen_function 16\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     nocode_wanted = 0;
     gsym(rsym);
@@ -7329,26 +7330,26 @@ static void gen_function(Sym *sym)
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     trace ("gen_function c="); eputs (itoa (sym->c)); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     gfunc_epilog();
     trace ("gen_function 19\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     cur_text_section->data_offset = ind;
     label_pop(&global_label_stack, NULL);
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     trace ("gen_function 21\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     /* reset local stack */
     local_scope = 0;
@@ -7356,9 +7357,9 @@ static void gen_function(Sym *sym)
     trace ("gen_function 23\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     trace ("gen_function sym->c="); eputs (itoa (sym->c)); eputs ("\n");
 
@@ -7371,17 +7372,17 @@ static void gen_function(Sym *sym)
 
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     tcc_debug_funcend(tcc_state, ind - func_ind);
     trace ("gen_function 30\n");
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     /* It's better to crash than to generate wrong code */
     cur_text_section = NULL;
@@ -7392,16 +7393,16 @@ static void gen_function(Sym *sym)
     nocode_wanted = 1;
     trace ("gen_function 33\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     check_vstack();
     trace ("*** text_section="); eputs (text_section ? text_section->name : "<null>"); eputs ("\n");
     for_each_elem(symtab_section, 1, esym, ElfW(Sym)) {
-      //trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
+      trace ("gen_function num="); eputs (itoa (esym->st_shndx)); eputs ("\n");
       name = (char *) strtab_section->data + esym->st_name;
-      //trace ("gen_function name="); eputs (name); eputs ("\n");
+          trace ("gen_function name="); eputs (name); eputs ("\n");
     }
     trace_exit ("gen_function");
 }

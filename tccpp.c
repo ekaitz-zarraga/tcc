@@ -554,7 +554,7 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
     p = cstr_buf.data;
 
     trace_enter ("get_tok_str");
-    //trace ("get_tok_str v="); eputs (itoa (v)); eputs ("\n");
+    trace ("get_tok_str v="); eputs (itoa (v)); eputs ("\n");
 
 
     switch(v) {
@@ -664,7 +664,7 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
             *p = '\0';
         } else if (v < tok_ident) {
             trace ("get_tok_str 03\n");
-            //trace ("get_tok_str 03 v="); eputs (itoa (v)); eputs ("\n");
+            trace ("get_tok_str 03 v="); eputs (itoa (v)); eputs ("\n");
             trace ("get_tok_str 03 v - TOK_IDENT="); eputs (itoa (v - TOK_IDENT)); eputs ("\n");
 #if 1
             trace ("get_tok_str 03 str="); eputs (table_ident[v - TOK_IDENT]->str) ; eputs ("\n");
@@ -2721,7 +2721,7 @@ static void parse_number(const char *p)
         }                                       \
         break;
 
-#if BOOTSTRAP
+#if 0 //BOOTSTRAP
 #define eputc(x)
 #define eputs(x)
 #endif
@@ -3263,11 +3263,6 @@ ST_FUNC void next_nomacro(void)
     trace_exit ("next_nomacro");
 }
  
-#if BOOTSTRAP
-#undef eputc
-#undef eputs
-#endif
-
 static void macro_subst(
     TokenString *tok_str,
     Sym **nested_list,
@@ -3792,11 +3787,6 @@ no_subst:
 
 }
 
-#if BOOTSTRAP
-#define eputc(x)
-#define eputs(x)
-#endif
-
 /* return next token with macro substitution */
 ST_FUNC void next(void)
 {
@@ -3855,11 +3845,6 @@ ST_FUNC void next(void)
     }
     trace_exit ("next");
 }
-
-#if BOOTSTRAP
-#undef eputc
-#undef eputs
-#endif
 
 /* push back current token and set current token to 'last_tok'. Only
    identifier case handled for labels. */
