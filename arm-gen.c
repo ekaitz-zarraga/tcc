@@ -636,7 +636,14 @@ void load(int r, SValue *sv)
     } else if (v < VT_CONST) {
       if(is_float(ft))
 #ifdef TCC_ARM_VFP
+#if !BOOTSTRAP
         o(0xEEB00A40|(vfpr(r)<<12)|vfpr(v)|T2CPR(ft)); /* fcpyX */
+#else
+      {
+        int t = 0xEEB00A40|(vfpr(r)<<12)|vfpr(v)|T2CPR(ft);
+        o(t); /* fcpyX */
+      }
+#endif
 #else
 	o(0xEE008180|(fpr(r)<<12)|fpr(v));
 #endif
@@ -2006,7 +2013,12 @@ ST_FUNC void gen_cvt_itof1(int t)
     r2|=r2<<12;
     if(!(vtop->type.t & VT_UNSIGNED))
       r2|=0x80;                /* fuitoX -> fsituX */
+#if !BOOTSTRAP
     o(0xEEB80A40|r2|T2CPR(t)); /* fYitoX*/
+#else
+    int x = 0xEEB80A40|r2|T2CPR(t);
+    o(x); /* fYitoX*/
+#endif
 #else
     r2=fpr(vtop->r=get_reg(RC_FLOAT));
     if((t & VT_BTYPE) != VT_FLOAT)
@@ -2082,7 +2094,12 @@ void gen_cvt_ftoi(int t)
 #ifdef TCC_ARM_VFP
     r=vfpr(gv(RC_FLOAT));
     u=u?0:0x10000;
+#if !BOOTSTRAP
     o(0xEEBC0AC0|(r<<12)|r|T2CPR(r2)|u); /* ftoXizY */
+#else
+    int x =0xEEBC0AC0|(r<<12)|r|T2CPR(r2)|u;
+    o(x); /* ftoXizY */
+#endif
     r2=intr(vtop->r=get_reg(RC_INT));
     o(0xEE100A10|(r<<16)|(r2<<12));
     return;
@@ -2136,7 +2153,12 @@ void gen_cvt_ftof(int t)
 #ifdef TCC_ARM_VFP
   if(((vtop->type.t & VT_BTYPE) == VT_FLOAT) != ((t & VT_BTYPE) == VT_FLOAT)) {
     uint32_t r = vfpr(gv(RC_FLOAT));
+#if !BOOTSTRAP
     o(0xEEB70AC0|(r<<12)|r|T2CPR(vtop->type.t));
+#else
+    int x = 0xEEB70AC0|(r<<12)|r|T2CPR(vtop->type.t);
+    o(x);
+#endif
   }
 #else
   /* all we have to do on i386 and FPA ARM is to put the float in a register */
