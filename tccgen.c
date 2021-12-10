@@ -64,7 +64,7 @@ ST_DATA CType char_pointer_type, func_old_type, int_type, size_type;
 
 ST_DATA struct switch_t {
     struct case_t {
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
         int64_t v1, v2;
 #else
       int32_t v1, v1_padding, v2, v2_padding;
@@ -1310,7 +1310,7 @@ static void lexpand(void)
     v = vtop->r & (VT_VALMASK | VT_LVAL);
     if (v == VT_CONST) {
         vdup();
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
         vtop[0].c.i >>= 32;
 #endif
     } else if (v == (VT_LVAL|VT_CONST) || v == (VT_LVAL|VT_LOCAL)) {
@@ -1339,7 +1339,7 @@ ST_FUNC void lexpand_nr(void)
     v=vtop[-1].r & (VT_VALMASK | VT_LVAL);
     if (v == VT_CONST) {
       vtop[-1].c.i = vtop->c.i;
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
       vtop->c.i = vtop->c.i >> 32;
 #endif
       vtop->r = VT_CONST;
@@ -1666,16 +1666,25 @@ static void gen_opl(int op)
 }
 #endif
 
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
 static uint64_t gen_opic_sdiv(uint64_t a, uint64_t b)
 {
+#if HAVE_LONG_LONG
     uint64_t x = (a >> 63 ? -a : a) / (b >> 63 ? -b : b);
     return (a ^ b) >> 63 ? -x : x;
+#else
+    uint32_t x = (a >> 31 ? -a : a) / (b >> 31 ? -b : b);
+    return (a ^ b) >> 31 ? -x : x;
+#endif
 }
 
 static int gen_opic_lt(uint64_t a, uint64_t b)
 {
+#if HAVE_LONG_LONG
     return (a ^ (uint64_t)1 << 63) < (b ^ (uint64_t)1 << 63);
+#else
+    return (a ^ (uint32_t)1 << 31) < (b ^ (uint32_t)1 << 31);
+#endif
 }
 #else
 static uint32_t gen_opic_sdiv(uint32_t a, uint32_t b)
@@ -4572,7 +4581,7 @@ ST_FUNC void unary(void)
         break;
     case TOK_builtin_choose_expr:
 	{
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
 	    int64_t c;
 #else
 	    int32_t c;

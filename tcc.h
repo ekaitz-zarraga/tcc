@@ -390,7 +390,7 @@ typedef union CValue {
     long double ld;
     double d;
     float f;
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
     uint64_t i;
 #else
     uint32_t i;
@@ -611,7 +611,7 @@ typedef struct CachedInclude {
 
 #ifdef CONFIG_TCC_ASM
 typedef struct ExprValue {
-#if HAVE_LONG_LONG
+#if HAVE_LONG_LONG_STUB || HAVE_LONG_LONG
     uint64_t v;
 #else
     uint32_t v;
