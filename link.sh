@@ -7,6 +7,11 @@ MES_SOURCE=${MES_SOURCE-mes-source}
 
 arch=$(uname -m)
 case $arch in
+     aarch*)
+         cpu=arm
+         triplet=arm-linux-gnueabihf
+         cross_prefix=${triplet}-
+         ;;
      arm*|aarch*)
          cpu=arm
          triplet=arm-unknown-linux-gnueabihf

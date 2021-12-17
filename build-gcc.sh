@@ -21,6 +21,15 @@ CPPFLAGS_TCC="
 
 arch=$(uname -m)
 case $arch in
+     aarch*)
+         cpu=arm
+         mes_cpu=arm
+         tcc_cpu=arm
+         triplet=arm-linux-gnueabihf
+         cross_prefix=${triplet}-
+         CFLAGS=-marm
+         CPP_TARGET_FLAG="-DTCC_CPU_VERSION=7 -DTCC_TARGET_ARM -DTCC_ARM_VFP"
+         ;;
      arm*|aarch*)
          cpu=arm
          mes_cpu=arm

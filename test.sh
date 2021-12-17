@@ -9,6 +9,12 @@ fi
 
 arch=$(uname -m)
 case $arch in
+    aarch*)
+         cpu=arm
+         tcc_cpu=arm
+         triplet=arm-linux-gnueabihf
+         cross_prefix=${triplet}-
+         ;;
      arm*|aarch*)
          cpu=arm
          tcc_cpu=arm
