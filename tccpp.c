@@ -22,6 +22,13 @@
 #include "tcc.h"
 #endif
 
+#if BOOTSTRAP && __arm__
+void
+tccpp_ok ()
+{
+}
+#endif
+
 /********************************************************/
 /* global variables */
 
