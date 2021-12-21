@@ -30,23 +30,41 @@ so I decided to fork TinyCC and instead grow MesCC (a bootstrappable
 sub-C compiler in a subset of Guile Scheme) into a full C99 compiler.
 
 Currently, the Reduced Binary Seed Bootstrap of the GNU Guix System
-(https://guix.gnu.org/blog/2019/guix-reduces-bootstrap-seed-by-50/)
-uses bootstrappable-tinycc.
+uses bootstrappable-tinycc.  See
+    https://guix.gnu.org/en/blog/2020/guix-further-reduces-bootstrap-seed-to-25/
+    https://guix.gnu.org/blog/2019/guix-reduces-bootstrap-seed-by-50/
 
-The fork consists of about 12 patches
+The fork consists of about 30 patches
 
-    cee58e0 build: Support building from bootstrap-mes.
-    39de356 bootstrappable: Force static link.
-    2b6271d bootstrappable: Work around MesCC bug.
-    379c62d bootstrappable: add tcc.h include guards to include location.
-    274bd06 bootstrappable: Handle libtcc1.a.
-    6ae9aa4 bootstrappable: Skip tidy_section_headers.
-    a130ce1 bootstrappable: HAVE_FLOAT.
-    de906df bootstrappable: HAVE_BITFIELD.
-    540ba0b bootstrappable: HAVE_LONG_LONG.
-    306f677 bootstrappable: Work around Nyacc-0.80.42 bug.
-    9c97705 build: bootstrap build scripts.
-    584478f bootstrappable: Remove non-free grep test.
+    ff2210b3 build: Add support for ARM.
+    f8c8caaf ARM: allow fake asm in functions.
+    d9ecdebc bootstrappable: ARM: Force eabi header.
+    82b822c3 bootstrappable: HAVE_LONG_LONG, part 3.
+    77ae03e8 bootstrappable: ARM: HAVE_FLOAT?
+    82678555 bootstrappable: ARM: generate __memcpy, __memmove, __memset.
+    0688c1f5 bootstrappable: ARM: HAVE_SETJMP.
+    35c9c246 bootstrappable: HAVE_LONG_LONG_STUB.
+    bdec98dd bootstrappable: HAVE_LONG_LONG, part 2.
+    2556e105 bootstrappable: ARM: HAVE_FLOAT.
+    fcb48635 bootstrappable: ARM: Avoid ternary.
+    d0608d0d bootstrappable: ARM: Avoid ternary in argument.
+    f7e98b52 bootstrappable: ARM: HAVE_FLOAT.
+    e23023ec bootstrappable: HAVE_FLOAT, part 2.
+    907479d7 bootstrappable: Avoid function modulo.
+    33403a40 bootstrappable: Avoid using __clear_cache.
+    94fa1710 bootstrappable: Use tmp initialization instead of for struct assigment.
+    35ccd609 bootstrappable: Support libtcc1-mes.a.
+    cee58e09 build: Support building from bootstrap-mes.
+    39de3568 bootstrappable: Force static link.
+    2b6271d1 bootstrappable: Work around MesCC bug.
+    379c62d6 bootstrappable: add tcc.h include guards to include location.
+    6ae9aa40 bootstrappable: Skip tidy_section_headers.
+    a130ce17 bootstrappable: HAVE_FLOAT.
+    de906df4 bootstrappable: HAVE_BITFIELD.
+    540ba0b4 bootstrappable: HAVE_LONG_LONG.
+    306f6779 bootstrappable: Work around Nyacc-0.80.42 bug.
+    9c97705c build: bootstrap build scripts.
+    584478fc bootstrappable: Remove non-free grep test.
 
 that work around bugs and missing C language features in MesCC.  Only
 three of these are really interesting: the HAVE_* patches that allow
