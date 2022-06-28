@@ -698,6 +698,23 @@ static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
     }
 }
 
+#elif defined(__riscv)
+static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
+{
+    // TODO make sure api matches
+    if (level == 0) {
+        *paddr = uc->uc_mcontext.pc;
+    } else {
+        addr_t *fp = (addr_t*)uc->uc_mcontext.__gregs[REG_S0]; // REG_S0 == 8
+        while (--level && fp >= (addr_t*)0x1000)
+            fp = (addr_t *)fp[-2];
+        if (fp < (addr_t*)0x1000)
+          return -1;
+        *paddr = fp[-1];
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------- */
 #else
 
