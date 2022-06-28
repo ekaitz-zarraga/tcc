@@ -59,7 +59,7 @@
      DEF(TOK_ASM2, "__asm")
      DEF(TOK_ASM3, "__asm__")
 
-#ifdef TCC_TARGET_ARM64
+#if defined TCC_TARGET_ARM64  || defined TCC_TARGET_RISCV64
      DEF(TOK_UINT128, "__uint128_t")
 #endif
 
@@ -144,6 +144,11 @@
      DEF(TOK_builtin_va_arg_types, "__builtin_va_arg_types")
 #endif
 #endif
+
+#ifdef TCC_TARGET_RISCV64
+     DEF(TOK_builtin_va_start, "__builtin_va_start")
+#endif
+
      DEF(TOK_REGPARM1, "regparm")
      DEF(TOK_REGPARM2, "__regparm__")
 
@@ -257,7 +262,7 @@
 #if defined TCC_TARGET_PE
      DEF(TOK___chkstk, "__chkstk")
 #endif
-#ifdef TCC_TARGET_ARM64
+#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64
      DEF(TOK___arm64_clear_cache, "__arm64_clear_cache")
      DEF(TOK___addtf3, "__addtf3")
      DEF(TOK___subtf3, "__subtf3")
@@ -350,4 +355,8 @@
 
 #if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
 #include "i386-tok.h"
+#endif
+
+#if defined TCC_TARGET_RISCV64
+#include "riscv64-tok.h"
 #endif

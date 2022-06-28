@@ -2452,7 +2452,7 @@ static void gen_cast(CType *type)
                     /* need to convert from 32bit to 64bit */
                     gv(RC_INT);
                     if (sbt != (VT_INT | VT_UNSIGNED)) {
-#if defined(TCC_TARGET_ARM64)
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_RISCV64)
                         gen_cvt_sxtw();
 #elif defined(TCC_TARGET_X86_64)
                         int r = gv(RC_INT);
@@ -3828,7 +3828,7 @@ static int parse_btype(CType *type, AttributeDef *ad)
                 goto basic_type1;
             }
             break;
-#ifdef TCC_TARGET_ARM64
+#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64
         case TOK_UINT128:
             /* GCC's __uint128_t appears in some Linux header files. Make it a
                synonym for long double to get the size and alignment right. */

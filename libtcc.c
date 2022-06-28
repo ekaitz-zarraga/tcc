@@ -66,6 +66,11 @@ static int nb_states;
 #include "x86_64-link.c"
 #include "i386-asm.c"
 #endif
+#ifdef TCC_TARGET_RISCV64
+#include "riscv64-gen.c"
+#include "riscv64-link.c"
+#include "riscv64-asm.c"
+#endif
 #ifdef CONFIG_TCC_ASM
 #include "tccasm.c"
 #endif
