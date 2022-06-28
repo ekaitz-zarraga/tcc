@@ -126,11 +126,12 @@
 /* #define TCC_TARGET_ARM    *//* ARMv4 code generator */
 /* #define TCC_TARGET_ARM64  *//* ARMv8 code generator */
 /* #define TCC_TARGET_C67    *//* TMS320C67xx code generator */
+/* #define TCC_TARGET_RISCV64 *//* risc-v code generator */
 
 /* default target is I386 */
 #if !defined(TCC_TARGET_I386) && !defined(TCC_TARGET_ARM) && \
     !defined(TCC_TARGET_ARM64) && !defined(TCC_TARGET_C67) && \
-    !defined(TCC_TARGET_X86_64)
+    !defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_RISCV64)
 #define TCC_TARGET_I386
 #endif
 
@@ -148,6 +149,8 @@
 # elif defined __arm__ && defined TCC_TARGET_ARM
 #  define TCC_IS_NATIVE
 # elif defined __aarch64__ && defined TCC_TARGET_ARM64
+#  define TCC_IS_NATIVE
+# elif defined __riscv && defined __LP64__ && defined TCC_TARGET_RISCV64
 #  define TCC_IS_NATIVE
 # endif
 #endif
@@ -242,6 +245,8 @@
 #  else
 #   define CONFIG_TCC_ELFINTERP "/lib64/ld-linux-x86-64.so.2"
 #  endif
+# elif defined(TCC_TARGET_RISCV64)
+#  define CONFIG_TCC_ELFINTERP "/lib/ld-linux-riscv64-lp64d.so.1"
 # elif !defined(TCC_ARM_EABI)
 #  if defined(TCC_MUSL)
 #   define CONFIG_TCC_ELFINTERP "/lib/ld-musl-arm.so.1"
@@ -319,6 +324,11 @@
 # include "coff.h"
 # include "c67-gen.c"
 # include "c67-link.c"
+#endif
+#ifdef TCC_TARGET_RISCV64
+# include "riscv64-gen.c"
+# include "riscv64-link.c"
+# include "riscv64-asm.c"
 #endif
 #undef TARGET_DEFS_ONLY
 
@@ -802,6 +812,11 @@ struct TCCState {
     int nb_sym_attrs;
     /* tiny assembler state */
     Sym *asm_labels;
+
+#ifdef TCC_TARGET_RISCV64
+    struct pcrel_hi { addr_t addr, val; } last_hi;
+    #define last_hi s1->last_hi
+#endif
 
 #ifdef TCC_TARGET_PE
     /* PE info */
@@ -1578,6 +1593,16 @@ ST_FUNC void gfunc_return(CType *func_type);
 ST_FUNC void gen_va_start(void);
 ST_FUNC void gen_va_arg(CType *t);
 ST_FUNC void gen_clear_cache(void);
+#endif
+
+/* ------------ riscv64-gen.c ------------ */
+#ifdef TCC_TARGET_RISCV64
+ST_FUNC void gen_opl(int op);
+//ST_FUNC void gfunc_return(CType *func_type);
+ST_FUNC void gen_va_start(void);
+ST_FUNC void arch_transfer_ret_regs(int);
+ST_FUNC void gen_cvt_sxtw(void);
+ST_FUNC void gen_increment_tcov (SValue *sv);
 #endif
 
 /* ------------ c67-gen.c ------------ */
