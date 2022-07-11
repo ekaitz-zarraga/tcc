@@ -110,6 +110,13 @@ ST_FUNC unsigned create_plt_entry(TCCState *s1, unsigned got_offset, struct sym_
     return plt_offset;
 }
 
+static ElfW_Rel *qrel; /* ptr to next reloc entry reused */
+
+void relocate_init(Section *sr)
+{
+    qrel = (ElfW_Rel *) sr->data;
+}
+
 /* relocate the PLT: compute addresses and offsets in the PLT now that final
    address for PLT and GOT are known (see fill_program_header) */
 ST_FUNC void relocate_plt(TCCState *s1)

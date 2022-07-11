@@ -15,11 +15,11 @@
 #define RC_F(x) (1 << (10 + (x))) // x = 0..7
 
 #define RC_IRET (RC_R(0)) // int return register class
-#define RC_IRE2 (RC_R(1)) // int 2nd return register class
+#define RC_LRET (RC_R(1)) // int 2nd return register class
 #define RC_FRET (RC_F(0)) // float return register class
 
 #define REG_IRET (TREG_R(0)) // int return register number
-#define REG_IRE2 (TREG_R(1)) // int 2nd return register number
+#define REG_LRET (TREG_R(1)) // int 2nd return register number
 #define REG_FRET (TREG_F(0)) // float return register number
 
 #define PTR_SIZE 8
@@ -164,6 +164,30 @@ ST_FUNC void gsym_addr(int t_, int a_)
     }
 }
 
+void gsym(int t)
+{
+  gsym_addr(t, ind);
+}
+
+/* TODO */
+/* generate a test. set 'inv' to invert test. Stack entry is popped */
+int gtst(int inv, int t)
+{
+  int v = vtop->r & VT_VALMASK;
+
+  if (nocode_wanted) {
+    ;
+  } else if (v == VT_CMP) {
+      /* TODO */
+  } else if (v == VT_JMP || v == VT_JMPI) {
+      /* TODO: Optimization for && or || removed ftm */
+      t = gjmp(t);
+      gsym(vtop->c.i);
+  }
+  vtop--;
+  return t;
+}
+
 static int load_symofs(int r, SValue *sv, int forstore)
 {
     int rr, doload = 0;
@@ -183,7 +207,7 @@ static int load_symofs(int r, SValue *sv, int forstore)
             doload = 1;
         }
         label.type.t = VT_VOID | VT_STATIC;
-	if (!nocode_wanted)
+        if (!nocode_wanted)
             put_extern_sym(&label, cur_text_section, ind, 0);
         rr = is_ireg(r) ? ireg(r) : 5;
         o(0x17 | (rr << 7));   // auipc RR, 0 %pcrel_hi(sym)+addend
@@ -211,7 +235,7 @@ static int load_symofs(int r, SValue *sv, int forstore)
 static void load_large_constant(int rr, int fc, uint32_t pi)
 {
     if (fc < 0)
-	pi++;
+        pi++;
     o(0x37 | (rr << 7) | (((pi + 0x800) & 0xfffff000))); // lui RR, up(up(fc))
     EI(0x13, 0, rr, rr, (int)pi << 20 >> 20);   // addi RR, RR, lo(up(fc))
     EI(0x13, 1, rr, rr, 12); // slli RR, RR, 12
@@ -257,14 +281,14 @@ ST_FUNC void load(int r, SValue *sv)
             int64_t si = sv->c.i;
             si >>= 32;
             if (si != 0) {
-		load_large_constant(rr, fc, si);
+                load_large_constant(rr, fc, si);
                 fc &= 0xff;
             } else {
                 o(0x37 | (rr << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
                 fc = fc << 20 >> 20;
-	    }
+            }
             br = rr;
-	} else {
+        } else {
             tcc_error("unimp: load(non-local lval)");
         }
         EI(opcode, func3, rr, br, fc); // l[bhwd][u] / fl[wd] RR, fc(BR)
@@ -282,7 +306,7 @@ ST_FUNC void load(int r, SValue *sv)
             int64_t si = sv->c.i;
             si >>= 32;
             if (si != 0) {
-		load_large_constant(rr, fc, si);
+                load_large_constant(rr, fc, si);
                 fc &= 0xff;
                 rb = rr;
                 do32bit = 0;
@@ -321,9 +345,10 @@ ST_FUNC void load(int r, SValue *sv)
               | (func7 << 25)); // fmv.{w.x, x.w, d.x, x.d} RR, VR
         }
     } else if (v == VT_CMP) {
-        int op = vtop->cmp_op;
-        int a = vtop->cmp_r & 0xff;
-        int b = (vtop->cmp_r >> 8) & 0xff;
+        // TODO cmp_op not defined in vtop!
+        int op = vtop->c.i;
+        int a = vtop->r & 0xff;
+        int b = (vtop->r >> 8) & 0xff;
         int inv = 0;
         switch (op) {
             case TOK_ULT:
@@ -397,12 +422,12 @@ ST_FUNC void store(int r, SValue *sv)
         ptrreg = 8; // s0
         si >>= 32;
         if (si != 0) {
-	    load_large_constant(ptrreg, fc, si);
+            load_large_constant(ptrreg, fc, si);
             fc &= 0xff;
         } else {
             o(0x37 | (ptrreg << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
             fc = fc << 20 >> 20;
-	}
+        }
     } else
       tcc_error("implement me: %s(!local)", __FUNCTION__);
     ES(is_freg(r) ? 0x27 : 0x23,                          // fs... | s...
@@ -506,9 +531,12 @@ static void reg_pass_rec(CType *type, int *rc, int *fieldofs, int ofs)
 {
     if ((type->t & VT_BTYPE) == VT_STRUCT) {
         Sym *f;
-        if (type->ref->type.t == VT_UNION)
-          rc[0] = -1;
-        else for (f = type->ref->next; f; f = f->next)
+        // TODO We can't check if something is a union or not, so treat it like
+        // a struct
+        // if (type->ref->type.t == VT_UNION)
+        //   rc[0] = -1;
+        // else 
+        for (f = type->ref->next; f; f = f->next)
           reg_pass_rec(&f->type, rc, fieldofs, ofs + f->c);
     } else if (type->t & VT_ARRAY) {
         if (type->ref->c < 0 || type->ref->c > 2)
@@ -718,12 +746,12 @@ ST_FUNC void gfunc_call(int nb_args)
                 vtop->type = char_pointer_type;
                 vpushi(ii >> 20);
 #ifdef CONFIG_TCC_BCHECK
-		if ((origtype.t & VT_BTYPE) == VT_STRUCT)
+                if ((origtype.t & VT_BTYPE) == VT_STRUCT)
                     tcc_state->do_bounds_check = 0;
 #endif
                 gen_op('+');
 #ifdef CONFIG_TCC_BCHECK
-		tcc_state->do_bounds_check = bc_save;
+                tcc_state->do_bounds_check = bc_save;
 #endif
                 indir();
                 vtop->type = origtype;
@@ -770,9 +798,9 @@ done:
 
 static int func_sub_sp_offset, num_va_regs, func_va_list_ofs;
 
-ST_FUNC void gfunc_prolog(Sym *func_sym)
+ST_FUNC void gfunc_prolog(CType *func_type)
 {
-    CType *func_type = &func_sym->type;
+    Sym *func_sym = func_type->ref;
     int i, addr, align, size;
     int param_addr = 0;
     int areg[2];
@@ -973,27 +1001,6 @@ ST_FUNC void gjmp_addr(int a)
     }
 }
 
-ST_FUNC int gjmp_cond(int op, int t)
-{
-    int tmp;
-    int a = vtop->cmp_r & 0xff;
-    int b = (vtop->cmp_r >> 8) & 0xff;
-    switch (op) {
-        case TOK_ULT: op = 6; break;
-        case TOK_UGE: op = 7; break;
-        case TOK_ULE: op = 7; tmp = a; a = b; b = tmp; break;
-        case TOK_UGT: op = 6; tmp = a; a = b; b = tmp; break;
-        case TOK_LT:  op = 4; break;
-        case TOK_GE:  op = 5; break;
-        case TOK_LE:  op = 5; tmp = a; a = b; b = tmp; break;
-        case TOK_GT:  op = 4; tmp = a; a = b; b = tmp; break;
-        case TOK_NE:  op = 1; break;
-        case TOK_EQ:  op = 0; break;
-    }
-    o(0x63 | (op ^ 1) << 12 | a << 15 | b << 20 | 8 << 7); // bOP a,b,+4
-    return gjmp(t);
-}
-
 ST_FUNC int gjmp_append(int n, int t)
 {
     void *p;
@@ -1037,8 +1044,8 @@ static void gen_opil(int op, int ll)
                     EI(0x13 | cll, func3, ireg(d), a, fc);
                     --vtop;
                     if (op >= TOK_ULT && op <= TOK_GT) {
-                      vset_VT_CMP(TOK_NE);
-                      vtop->cmp_r = ireg(d) | 0 << 8;
+                      vtop->r = VT_CMP;
+                      vtop->c.i = op;
                     } else
                       vtop[0].r = d;
                     return;
@@ -1064,7 +1071,7 @@ static void gen_opil(int op, int ll)
                 case TOK_GE:  /* -> TOK_LT */
                 case TOK_GT:  /* -> TOK_LE */
                     gen_opil(op - 1, !ll);
-                    vtop->cmp_op ^= 1;
+                    vtop->c.i ^= 1;
                     return;
 
                 case TOK_NE:
@@ -1072,8 +1079,8 @@ static void gen_opil(int op, int ll)
                     if (fc)
                       gen_opil('-', !ll), a = ireg(vtop++->r);
                     --vtop;
-                    vset_VT_CMP(op);
-                    vtop->cmp_r = a | 0 << 8;
+                    vtop->r = VT_CMP;
+                    vtop->c.i = op;
                     return;
             }
         }
@@ -1089,8 +1096,8 @@ static void gen_opil(int op, int ll)
     switch (op) {
     default:
         if (op >= TOK_ULT && op <= TOK_GT) {
-            vset_VT_CMP(op);
-            vtop->cmp_r = a | b << 8;
+            vtop->r = VT_CMP;
+            vtop->c.i = op;
             break;
         }
         tcc_error("implement me: %s(%s)", __FUNCTION__, get_tok_str(op, NULL));
@@ -1148,6 +1155,20 @@ ST_FUNC void gen_opl(int op)
 {
     gen_opil(op, 1);
 }
+
+
+// TODO: These two functions were defined in tccgen.c in mob branch---
+ST_FUNC Sym *external_helper_sym(int v)
+{
+    CType ct = { VT_FUNC, NULL };
+    return external_global_sym(v, &ct, 0);
+}
+
+ST_FUNC void vpush_helper_func(int v)
+{
+    vpushsym(&func_old_type, external_helper_sym(v));
+}
+//------------------------------------------------------------ENDTODO
 
 ST_FUNC void gen_opf(int op)
 {
