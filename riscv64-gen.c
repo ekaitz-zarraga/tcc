@@ -15,11 +15,11 @@
 #define RC_F(x) (1 << (10 + (x))) // x = 0..7
 
 #define RC_IRET (RC_R(0)) // int return register class
-#define RC_IRE2 (RC_R(1)) // int 2nd return register class
+#define RC_LRET (RC_R(1)) // int 2nd return register class
 #define RC_FRET (RC_F(0)) // float return register class
 
 #define REG_IRET (TREG_R(0)) // int return register number
-#define REG_IRE2 (TREG_R(1)) // int 2nd return register number
+#define REG_LRET (TREG_R(1)) // int 2nd return register number
 #define REG_FRET (TREG_F(0)) // float return register number
 
 #define PTR_SIZE 8
@@ -35,17 +35,6 @@
 #define USING_GLOBALS
 #include "tcc.h"
 #include <assert.h>
-
-ST_DATA const char * const target_machine_defs =
-    "__riscv\0"
-    "__riscv_xlen 64\0"
-    "__riscv_flen 64\0"
-    "__riscv_div\0"
-    "__riscv_mul\0"
-    "__riscv_fdiv\0"
-    "__riscv_fsqrt\0"
-    "__riscv_float_abi_double\0"
-    ;
 
 #define XLEN 8
 
@@ -164,6 +153,146 @@ ST_FUNC void gsym_addr(int t_, int a_)
     }
 }
 
+void gsym(int t)
+{
+  gsym_addr(t, ind);
+}
+
+
+static int negcc(int cc)
+{
+  switch(cc)
+  {
+    case TOK_ULT:
+      return TOK_UGE;
+    case TOK_UGE:
+      return TOK_ULT;
+    case TOK_EQ:
+      return TOK_NE;
+    case TOK_NE:
+      return TOK_EQ;
+    case TOK_ULE:
+      return TOK_UGT;
+    case TOK_UGT:
+      return TOK_ULE;
+    case TOK_Nset:
+      return TOK_Nclear;
+    case TOK_Nclear:
+      return TOK_Nset;
+    case TOK_LT:
+      return TOK_GE;
+    case TOK_GE:
+      return TOK_LT;
+    case TOK_LE:
+      return TOK_GT;
+    case TOK_GT:
+      return TOK_LE;
+  }
+  tcc_error("unexpected condition code");
+  return TOK_NE;
+}
+
+ST_FUNC int gjmp_cond(int op, int t)
+{
+    int tmp;
+    // TODO obtain a and b properly
+    int v = vtop->r & VT_VALMASK;
+    int a = vtop->cmp_r & 0xff;
+    int b = (vtop->cmp_r >> 8) & 0xff;
+    switch (op) {
+        case TOK_ULT: op = 6; break;
+        case TOK_UGE: op = 7; break;
+        case TOK_ULE: op = 7; tmp = a; a = b; b = tmp; break;
+        case TOK_UGT: op = 6; tmp = a; a = b; b = tmp; break;
+        case TOK_LT:  op = 4; break;
+        case TOK_GE:  op = 5; break;
+        case TOK_LE:  op = 5; tmp = a; a = b; b = tmp; break;
+        case TOK_GT:  op = 4; tmp = a; a = b; b = tmp; break;
+        case TOK_NE:  op = 1; break;
+        case TOK_EQ:  op = 0; break;
+    }
+    o(0x63 | (op ^ 1) << 12 | a << 15 | b << 20 | 8 << 7); // bOP a,b,+4
+    return gjmp(t);
+}
+
+ST_FUNC int gjmp_append(int n, int t)
+{
+    void *p;
+    /* insert jump list n into t */
+    if (n) {
+        uint32_t n1 = n, n2;
+        while ((n2 = read32le(p = cur_text_section->data + n1)))
+            n1 = n2;
+        write32le(p, t);
+        t = n;
+    }
+    return t;
+}
+
+
+/* TODO */
+/* generate a test. set 'inv' to invert test. Stack entry is popped */
+int gtst(int inv, int t)
+{
+  // I'd love be sure of what's `t` -> I think it's the jump target. In all the
+  // gtst calls I see it's `0` but then when other things are called it's set
+  // to another value and returned, so it might be that: the test doesn't need
+  // to jump until we insert instructions after it...?
+  int v = vtop->r & VT_VALMASK;
+  int r=ind;
+  // What's `ind`? the current location in the code (it looks like because
+  // it's incremented in o()
+
+  if (nocode_wanted) {
+    ;
+  } else if (v == VT_CMP) {
+      t = gjmp_cond(inv? negcc(vtop->c.i):vtop->c.i, t);
+      /*
+       * vtop->c.i  contains the kind of the operation we need to do (we need
+       * to invert it if we have `inv` set, we can use `negcc` for that
+       *  - TOK_ULT
+       *  - TOK_UGE
+       *  - TOK_EQ
+       *  - TOK_NE
+       *  - TOK_ULE
+       *  - TOK_UGT
+       *  - TOK_Nset
+       *  - TOK_Nclear
+       *  - TOK_LT
+       *  - TOK_GE
+       *  - TOK_LE
+       *  - TOK_GT
+       *  We generate the operation with that, and we need to insert the branch
+       *  too: then o(operation) to generate the code.
+       *  The branch is obtained from:
+       *  - r -> position
+       *  - t -> address
+       *  - fail -> for the case that the jump is too large to be encoded here
+       *     `- That should load the address in steps and all that, but arm
+       *        doesn't implement that yet, so we won't
+       */
+  } else if (v == VT_JMP || v == VT_JMPI) {
+
+      // && and || optimization I don't understand
+      /* Check if jump taken (v&1) is and the inverted test match */
+      if ((v & 1) == inv) {
+          if(!vtop->c.i)
+              vtop->c.i=t;
+          else{
+              // DOES SOME WEIRD INSTRUCTION DECODING HERE -> patching previous
+              // jumps?
+              t=gjmp_append(vtop->c.i, t);
+          }
+      } else {
+          // Just jump?
+          t = gjmp(t);
+          gsym(vtop->c.i);
+      }
+  }
+  vtop--;
+  return t;
+}
+
 static int load_symofs(int r, SValue *sv, int forstore)
 {
     int rr, doload = 0;
@@ -183,7 +312,7 @@ static int load_symofs(int r, SValue *sv, int forstore)
             doload = 1;
         }
         label.type.t = VT_VOID | VT_STATIC;
-	if (!nocode_wanted)
+        if (!nocode_wanted)
             put_extern_sym(&label, cur_text_section, ind, 0);
         rr = is_ireg(r) ? ireg(r) : 5;
         o(0x17 | (rr << 7));   // auipc RR, 0 %pcrel_hi(sym)+addend
@@ -211,13 +340,13 @@ static int load_symofs(int r, SValue *sv, int forstore)
 static void load_large_constant(int rr, int fc, uint32_t pi)
 {
     if (fc < 0)
-	pi++;
+        pi++;
     o(0x37 | (rr << 7) | (((pi + 0x800) & 0xfffff000))); // lui RR, up(up(fc))
-    EI(0x13, 0, rr, rr, (int)pi << 20 >> 20);   // addi RR, RR, lo(up(fc))
+    EI(0x13, 0, rr, rr, (int32_t)((int32_t)pi << 20) >> 20);   // addi RR, RR, lo(up(fc))
     EI(0x13, 1, rr, rr, 12); // slli RR, RR, 12
-    EI(0x13, 0, rr, rr, (fc + (1 << 19)) >> 20);  // addi RR, RR, up(lo(fc))
+    EI(0x13, 0, rr, rr, (int32_t)(fc + (1 << 19)) >> 20);  // addi RR, RR, up(lo(fc))
     EI(0x13, 1, rr, rr, 12); // slli RR, RR, 12
-    fc = fc << 12 >> 12;
+    fc = (int32_t)((int32_t)fc << 12) >> 12;
     EI(0x13, 0, rr, rr, fc >> 8);  // addi RR, RR, lo1(lo(fc))
     EI(0x13, 1, rr, rr, 8); // slli RR, RR, 8
 }
@@ -257,14 +386,14 @@ ST_FUNC void load(int r, SValue *sv)
             int64_t si = sv->c.i;
             si >>= 32;
             if (si != 0) {
-		load_large_constant(rr, fc, si);
+                load_large_constant(rr, fc, si);
                 fc &= 0xff;
             } else {
-                o(0x37 | (rr << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
-                fc = fc << 20 >> 20;
-	    }
+                o(0x37 | (int32_t)(rr << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
+                fc = (int32_t)(fc << 20) >> 20;
+            }
             br = rr;
-	} else {
+        } else {
             tcc_error("unimp: load(non-local lval)");
         }
         EI(opcode, func3, rr, br, fc); // l[bhwd][u] / fl[wd] RR, fc(BR)
@@ -282,7 +411,7 @@ ST_FUNC void load(int r, SValue *sv)
             int64_t si = sv->c.i;
             si >>= 32;
             if (si != 0) {
-		load_large_constant(rr, fc, si);
+                load_large_constant(rr, fc, si);
                 fc &= 0xff;
                 rb = rr;
                 do32bit = 0;
@@ -295,7 +424,7 @@ ST_FUNC void load(int r, SValue *sv)
         if (((unsigned)fc + (1 << 11)) >> 12)
             o(0x37 | (rr << 7) | ((0x800 + fc) & 0xfffff000)), rb = rr; //lui RR, upper(fc)
         if (fc || (rr != rb) || do32bit || (fr & VT_SYM))
-          EI(0x13 | do32bit, 0, rr, rb, fc << 20 >> 20); // addi[w] R, x0|R, FC
+          EI(0x13 | do32bit, 0, rr, rb, (int32_t)(fc << 20) >> 20); // addi[w] R, x0|R, FC
         if (zext) {
             EI(0x13, 1, rr, rr, 32); // slli RR, RR, 32
             EI(0x13, 5, rr, rr, 32); // srli RR, RR, 32
@@ -321,7 +450,8 @@ ST_FUNC void load(int r, SValue *sv)
               | (func7 << 25)); // fmv.{w.x, x.w, d.x, x.d} RR, VR
         }
     } else if (v == VT_CMP) {
-        int op = vtop->cmp_op;
+        // TODO cmp_op not defined in vtop!
+        int op = vtop->c.i;
         int a = vtop->cmp_r & 0xff;
         int b = (vtop->cmp_r >> 8) & 0xff;
         int inv = 0;
@@ -397,14 +527,14 @@ ST_FUNC void store(int r, SValue *sv)
         ptrreg = 8; // s0
         si >>= 32;
         if (si != 0) {
-	    load_large_constant(ptrreg, fc, si);
+            load_large_constant(ptrreg, fc, si);
             fc &= 0xff;
         } else {
             o(0x37 | (ptrreg << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
-            fc = fc << 20 >> 20;
-	}
+            fc = (int32_t)(fc << 20) >> 20;
+        }
     } else
-      tcc_error("implement me: %s(!local)", __FUNCTION__);
+      tcc_error("implement me: %s(!local)", "store");
     ES(is_freg(r) ? 0x27 : 0x23,                          // fs... | s...
        size == 1 ? 0 : size == 2 ? 1 : size == 4 ? 2 : 3, // ... [wd] | [bhwd]
        ptrreg, rr, fc);                                   // RR, fc(base)
@@ -506,9 +636,12 @@ static void reg_pass_rec(CType *type, int *rc, int *fieldofs, int ofs)
 {
     if ((type->t & VT_BTYPE) == VT_STRUCT) {
         Sym *f;
-        if (type->ref->type.t == VT_UNION)
-          rc[0] = -1;
-        else for (f = type->ref->next; f; f = f->next)
+        // TODO We can't check if something is a union or not, so treat it like
+        // a struct
+        // if (type->ref->type.t == VT_UNION)
+        //   rc[0] = -1;
+        // else 
+        for (f = type->ref->next; f; f = f->next)
           reg_pass_rec(&f->type, rc, fieldofs, ofs + f->c);
     } else if (type->t & VT_ARRAY) {
         if (type->ref->c < 0 || type->ref->c > 2)
@@ -627,10 +760,14 @@ ST_FUNC void gfunc_call(int nb_args)
     if ((vtop->r & VT_VALMASK) == VT_CMP)
       gv(RC_INT);
 
+
     if (stack_add) {
-        if (stack_add >= 0x1000) {
-            o(0x37 | (5 << 7) | (-stack_add & 0xfffff000)); //lui t0, upper(v)
-            EI(0x13, 0, 5, 5, -stack_add << 20 >> 20); // addi t0, t0, lo(v)
+        if (stack_add >= 0x800) {
+            unsigned int bit11 = (((unsigned int)-stack_add) >> 11) & 1;
+            o(0x37 | (5 << 7) |
+              ((-stack_add + (bit11 << 12)) & 0xfffff000)); //lui t0, upper(v)
+            EI(0x13, 0, 5, 5, ((-stack_add & 0xfff) - bit11 * (1 << 12)));
+                                                         // addi t0, t0, lo(v)
             ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
         }
         else
@@ -718,12 +855,12 @@ ST_FUNC void gfunc_call(int nb_args)
                 vtop->type = char_pointer_type;
                 vpushi(ii >> 20);
 #ifdef CONFIG_TCC_BCHECK
-		if ((origtype.t & VT_BTYPE) == VT_STRUCT)
+                if ((origtype.t & VT_BTYPE) == VT_STRUCT)
                     tcc_state->do_bounds_check = 0;
 #endif
                 gen_op('+');
 #ifdef CONFIG_TCC_BCHECK
-		tcc_state->do_bounds_check = bc_save;
+                tcc_state->do_bounds_check = bc_save;
 #endif
                 indir();
                 vtop->type = origtype;
@@ -757,9 +894,12 @@ done:
     gcall_or_jmp(1);
     vtop -= nb_args + 1;
     if (stack_add) {
-        if (stack_add >= 0x1000) {
-            o(0x37 | (5 << 7) | (stack_add & 0xfffff000)); //lui t0, upper(v)
-            EI(0x13, 0, 5, 5, stack_add << 20 >> 20); // addi t0, t0, lo(v)
+        if (stack_add >= 0x800) {
+            unsigned int bit11 = ((unsigned int)stack_add >> 11) & 1;
+            o(0x37 | (5 << 7) |
+              ((stack_add + (bit11 << 12)) & 0xfffff000)); //lui t0, upper(v)
+            EI(0x13, 0, 5, 5, (stack_add & 0xfff) - bit11 * (1 << 12));
+                                                           // addi t0, t0, lo(v)
             ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
         }
         else
@@ -770,9 +910,9 @@ done:
 
 static int func_sub_sp_offset, num_va_regs, func_va_list_ofs;
 
-ST_FUNC void gfunc_prolog(Sym *func_sym)
+ST_FUNC void gfunc_prolog(CType *func_type)
 {
-    CType *func_type = &func_sym->type;
+    Sym *func_sym = func_type->ref;
     int i, addr, align, size;
     int param_addr = 0;
     int areg[2];
@@ -788,8 +928,11 @@ ST_FUNC void gfunc_prolog(Sym *func_sym)
     addr = 0;
     /* if the function returns by reference, then add an
        implicit pointer parameter */
+    func_vt = sym->type;
+    func_var = (sym->c == FUNC_ELLIPSIS);
     size = type_size(&func_vt, &align);
-    if (size > 2 * XLEN) {
+    if (((func_vt.t & VT_BTYPE) == VT_STRUCT)
+        && (size > 2 * XLEN)) {
         loc -= 8;
         func_vc = loc;
         ES(0x23, 3, 8, 10 + areg[0]++, loc); // sd a0, loc(s0)
@@ -901,7 +1044,7 @@ ST_FUNC void gfunc_epilog(void)
     if (v >= (1 << 11)) {
         d = 16;
         o(0x37 | (5 << 7) | ((0x800 + (v-16)) & 0xfffff000)); //lui t0, upper(v)
-        EI(0x13, 0, 5, 5, (v-16) << 20 >> 20); // addi t0, t0, lo(v)
+        EI(0x13, 0, 5, 5, (int32_t)((v-16) << 20) >> 20); // addi t0, t0, lo(v)
         ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
     }
     EI(0x03, 3, 1, 2, d - 8 - num_va_regs * 8);  // ld ra, v-8(sp)
@@ -912,7 +1055,7 @@ ST_FUNC void gfunc_epilog(void)
     if (v >= (1 << 11)) {
         EI(0x13, 0, 8, 2, d - num_va_regs * 8);      // addi s0, sp, d
         o(0x37 | (5 << 7) | ((0x800 + (v-16)) & 0xfffff000)); //lui t0, upper(v)
-        EI(0x13, 0, 5, 5, (v-16) << 20 >> 20); // addi t0, t0, lo(v)
+        EI(0x13, 0, 5, 5, (int32_t)((v-16) << 20) >> 20); // addi t0, t0, lo(v)
         ER(0x33, 0, 2, 2, 5, 0x20); // sub sp, sp, t0
         gjmp_addr(func_sub_sp_offset + 5*4);
     }
@@ -973,41 +1116,6 @@ ST_FUNC void gjmp_addr(int a)
     }
 }
 
-ST_FUNC int gjmp_cond(int op, int t)
-{
-    int tmp;
-    int a = vtop->cmp_r & 0xff;
-    int b = (vtop->cmp_r >> 8) & 0xff;
-    switch (op) {
-        case TOK_ULT: op = 6; break;
-        case TOK_UGE: op = 7; break;
-        case TOK_ULE: op = 7; tmp = a; a = b; b = tmp; break;
-        case TOK_UGT: op = 6; tmp = a; a = b; b = tmp; break;
-        case TOK_LT:  op = 4; break;
-        case TOK_GE:  op = 5; break;
-        case TOK_LE:  op = 5; tmp = a; a = b; b = tmp; break;
-        case TOK_GT:  op = 4; tmp = a; a = b; b = tmp; break;
-        case TOK_NE:  op = 1; break;
-        case TOK_EQ:  op = 0; break;
-    }
-    o(0x63 | (op ^ 1) << 12 | a << 15 | b << 20 | 8 << 7); // bOP a,b,+4
-    return gjmp(t);
-}
-
-ST_FUNC int gjmp_append(int n, int t)
-{
-    void *p;
-    /* insert jump list n into t */
-    if (n) {
-        uint32_t n1 = n, n2;
-        while ((n2 = read32le(p = cur_text_section->data + n1)))
-            n1 = n2;
-        write32le(p, t);
-        t = n;
-    }
-    return t;
-}
-
 static void gen_opil(int op, int ll)
 {
     int a, b, d;
@@ -1015,7 +1123,7 @@ static void gen_opil(int op, int ll)
     ll = ll ? 0 : 8;
     if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
         int fc = vtop->c.i;
-        if (fc == vtop->c.i && !(((unsigned)fc + (1 << 11)) >> 12)) {
+        if (fc == vtop->c.i && !((uint32_t)((unsigned)fc + (1 << 11)) >> 12)) {
             int cll = 0;
             int m = ll ? 31 : 63;
             vswap();
@@ -1037,7 +1145,8 @@ static void gen_opil(int op, int ll)
                     EI(0x13 | cll, func3, ireg(d), a, fc);
                     --vtop;
                     if (op >= TOK_ULT && op <= TOK_GT) {
-                      vset_VT_CMP(TOK_NE);
+                      vtop->r = VT_CMP;
+                      vtop->c.i = TOK_NE;
                       vtop->cmp_r = ireg(d) | 0 << 8;
                     } else
                       vtop[0].r = d;
@@ -1064,7 +1173,7 @@ static void gen_opil(int op, int ll)
                 case TOK_GE:  /* -> TOK_LT */
                 case TOK_GT:  /* -> TOK_LE */
                     gen_opil(op - 1, !ll);
-                    vtop->cmp_op ^= 1;
+                    vtop->c.i ^= 1;
                     return;
 
                 case TOK_NE:
@@ -1072,7 +1181,8 @@ static void gen_opil(int op, int ll)
                     if (fc)
                       gen_opil('-', !ll), a = ireg(vtop++->r);
                     --vtop;
-                    vset_VT_CMP(op);
+                    vtop->r = VT_CMP;
+                    vtop->c.i = op;
                     vtop->cmp_r = a | 0 << 8;
                     return;
             }
@@ -1089,11 +1199,12 @@ static void gen_opil(int op, int ll)
     switch (op) {
     default:
         if (op >= TOK_ULT && op <= TOK_GT) {
-            vset_VT_CMP(op);
+            vtop->r = VT_CMP;
+            vtop->c.i = op;
             vtop->cmp_r = a | b << 8;
             break;
         }
-        tcc_error("implement me: %s(%s)", __FUNCTION__, get_tok_str(op, NULL));
+        tcc_error("implement me: %s(%s)", "gen_opil", get_tok_str(op, NULL));
         break;
 
     case '+':
@@ -1148,6 +1259,20 @@ ST_FUNC void gen_opl(int op)
 {
     gen_opil(op, 1);
 }
+
+
+// TODO: These two functions were defined in tccgen.c in mob branch---
+ST_FUNC Sym *external_helper_sym(int v)
+{
+    CType ct = { VT_FUNC, NULL };
+    return external_global_sym(v, &ct, 0);
+}
+
+ST_FUNC void vpush_helper_func(int v)
+{
+    vpushsym(&func_old_type, external_helper_sym(v));
+}
+//------------------------------------------------------------ENDTODO
 
 ST_FUNC void gen_opf(int op)
 {
@@ -1382,12 +1507,24 @@ ST_FUNC void ggoto(void)
 
 ST_FUNC void gen_vla_sp_save(int addr)
 {
-    ES(0x23, 3, 8, 2, addr); // sd sp, fc(s0)
+    if (((unsigned)addr + (1 << 11)) >> 12) {
+        o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
+        ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
+        ES(0x23, 3, 5, 2, (int32_t)((int32_t)addr << 20) >> 20); // sd sp, fc(t0)
+    }
+    else
+        ES(0x23, 3, 8, 2, addr); // sd sp, fc(s0)
 }
 
 ST_FUNC void gen_vla_sp_restore(int addr)
 {
-    EI(0x03, 3, 2, 8, addr); // ld sp, fc(s0)
+    if ((uint32_t)((uint32_t)addr + (1 << 11)) >> 12) {
+        o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
+        ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
+        EI(0x03, 3, 2, 5, (int32_t)((int32_t)addr << 20) >> 20); // ld sp, fc(t0)
+    }
+    else
+        EI(0x03, 3, 2, 8, addr); // ld sp, fc(s0)
 }
 
 ST_FUNC void gen_vla_alloc(CType *type, int align)

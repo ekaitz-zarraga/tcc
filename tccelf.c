@@ -450,6 +450,16 @@ ST_FUNC void* tcc_get_symbol_err(TCCState *s, const char *name)
 }
 #endif
 
+ST_FUNC int set_global_sym(TCCState *s1, const char *name, Section *sec, addr_t offs)
+{
+    int shn = sec ? sec->sh_num : offs || !name ? SHN_ABS : SHN_UNDEF;
+    if (sec && offs == -1)
+        offs = sec->data_offset;
+    return set_elf_sym(symtab_section, offs, 0,
+        ELFW(ST_INFO)(name ? STB_GLOBAL : STB_LOCAL, STT_NOTYPE), 0, shn, name);
+}
+
+
 /* add an elf symbol : check if it is already defined and patch
    it. Return symbol index. NOTE that sh_num can be SHN_UNDEF. */
 ST_FUNC int set_elf_sym(Section *s, addr_t value, unsigned long size,
@@ -579,7 +589,7 @@ ST_FUNC void put_elf_reloc(Section *symtab, Section *s, unsigned long offset,
 ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
 {
     Section *sr = s->reloc;
-    ElfW_Rel *r, *dest;
+    ElfW_Rel *r, *dest, tmp;
     ssize_t a;
     ElfW(Addr) addr;
 
@@ -598,7 +608,7 @@ ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
 	for (; i >= (ssize_t)oldrelocoffset &&
                ei->r_offset > addr; i -= sizeof(*r)) {
             ei = (ElfW_Rel*)(sr->data + i);
-	    ElfW_Rel tmp = *(ElfW_Rel*)(sr->data + a);
+	    tmp = *(ElfW_Rel*)(sr->data + a);
 	    *(ElfW_Rel*)(sr->data + a) = *(ElfW_Rel*)(sr->data + i);
 	    *(ElfW_Rel*)(sr->data + i) = tmp;
 	}
@@ -846,20 +856,36 @@ static void relocate_rel(TCCState *s1, Section *sr)
    their space */
 static int prepare_dynamic_rel(TCCState *s1, Section *sr)
 {
+    int count = 0;
+#if defined(TCC_TARGET_I386) || defined(TCC_TARGET_X86_64) || \
+    defined(TCC_TARGET_ARM) || defined(TCC_TARGET_ARM64) || \
+    defined(TCC_TARGET_RISCV64)
     ElfW_Rel *rel;
-    int sym_index, type, count;
-
-    count = 0;
     for_each_elem(sr, 0, rel, ElfW_Rel) {
-        sym_index = ELFW(R_SYM)(rel->r_info);
-        type = ELFW(R_TYPE)(rel->r_info);
+        int sym_index = ELFW(R_SYM)(rel->r_info);
+        int type = ELFW(R_TYPE)(rel->r_info);
         switch(type) {
 #if defined(TCC_TARGET_I386)
         case R_386_32:
+            if (!get_sym_attr(s1, sym_index, 0)->dyn_index
+                && ((ElfW(Sym)*)symtab_section->data + sym_index)->st_shndx == SHN_UNDEF) {
+                /* don't fixup unresolved (weak) symbols */
+                rel->r_info = ELFW(R_INFO)(sym_index, R_386_RELATIVE);
+                break;
+            }
 #elif defined(TCC_TARGET_X86_64)
         case R_X86_64_32:
         case R_X86_64_32S:
         case R_X86_64_64:
+#elif defined(TCC_TARGET_ARM)
+        case R_ARM_ABS32:
+        case R_ARM_TARGET1:
+#elif defined(TCC_TARGET_ARM64)
+        case R_AARCH64_ABS32:
+        case R_AARCH64_ABS64:
+#elif defined(TCC_TARGET_RISCV64)
+        case R_RISCV_32:
+        case R_RISCV_64:
 #endif
             count++;
             break;
@@ -880,6 +906,7 @@ static int prepare_dynamic_rel(TCCState *s1, Section *sr)
         sr->sh_flags |= SHF_ALLOC;
         sr->sh_size = count * sizeof(ElfW_Rel);
     }
+#endif
     return count;
 }
 
@@ -1206,6 +1233,10 @@ ST_FUNC void tcc_add_linker_symbols(TCCState *s1)
                 bss_section->data_offset, 0,
                 ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE), 0,
                 bss_section->sh_num, "_end");
+#ifdef TCC_TARGET_RISCV64
+    /* XXX should be .sdata+0x800, not .data+0x800 */
+    set_global_sym(s1, "__global_pointer$", data_section, 0x800);
+#endif
 #ifndef TCC_TARGET_PE
     /* horrible new standard ldscript defines */
     add_init_array_defines(s1, ".preinit_array");
@@ -1813,7 +1844,7 @@ static int final_sections_reloc(TCCState *s1)
         /* On X86 gdb 7.3 works in any case but gdb 6.6 will crash if SHF_ALLOC
         checking is removed */
 #else
-        if (s->reloc && s != s1->got)
+        if (s->reloc)
         /* On X86_64 gdb 7.3 will crash if SHF_ALLOC checking is present */
 #endif
             relocate_section(s1, s);
@@ -1879,6 +1910,8 @@ static void tcc_output_elf(TCCState *s1, FILE *f, int phnum, ElfW(Phdr) *phdr,
 #else
     ehdr.e_ident[EI_OSABI] = ELFOSABI_ARM;
 #endif
+#elif defined TCC_TARGET_RISCV64
+    ehdr.e_flags = EF_RISCV_FLOAT_ABI_DOUBLE;
 #endif
     switch(file_type) {
     default:
@@ -2193,8 +2226,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
         }
     }
 
-    /* if building executable or DLL, then relocate each section
-       except the GOT which is already relocated */
+    /* if building executable or DLL, then relocate each section */
     if (file_type != TCC_OUTPUT_OBJ) {
         ret = final_sections_reloc(s1);
         if (ret)
@@ -2516,6 +2548,9 @@ ST_FUNC int tcc_load_object_file(TCCState *s1,
                 if (!sym_index && !sm->link_once
 #ifdef TCC_TARGET_ARM
                     && type != R_ARM_V4BX
+#elif defined TCC_TARGET_RISCV64
+                    && type != R_RISCV_ALIGN
+                    && type != R_RISCV_RELAX
 #endif
                    ) {
                 invalid_reloc:
