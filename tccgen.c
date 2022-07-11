@@ -1133,6 +1133,11 @@ ST_FUNC int gv(int rc)
         if (vtop->r & VT_MUSTBOUND) 
             gbound();
 #endif
+#ifdef TCC_TARGET_RISCV64
+        /* XXX mega hack */
+        if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE && rc == RC_FLOAT)
+          rc = RC_INT;
+#endif
 
         r = vtop->r & VT_VALMASK;
         rc2 = (rc & RC_FLOAT) ? RC_FLOAT : RC_INT;
@@ -1151,7 +1156,10 @@ ST_FUNC int gv(int rc)
         if (r >= VT_CONST
          || (vtop->r & VT_LVAL)
          || !(reg_classes[r] & rc)
-#if PTR_SIZE == 8
+#ifdef TCC_TARGET_RISCV64
+         || ((vtop->type.t & VT_BTYPE) == VT_QLONG && (vtop->r2 >= NB_REGS || !(reg_classes[vtop->r2] & rc2)))
+         || ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE && (vtop->r2 >= NB_REGS || !(reg_classes[vtop->r2] & rc2)))
+#elif PTR_SIZE == 8
          || ((vtop->type.t & VT_BTYPE) == VT_QLONG && !(reg_classes[vtop->r2] & rc2))
          || ((vtop->type.t & VT_BTYPE) == VT_QFLOAT && !(reg_classes[vtop->r2] & rc2))
 #else
@@ -1160,7 +1168,10 @@ ST_FUNC int gv(int rc)
             )
         {
             r = get_reg(rc);
-#if PTR_SIZE == 8
+#ifdef TCC_TARGET_RISCV64
+            if (((vtop->type.t & VT_BTYPE) == VT_QLONG) || ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE)) {
+                int addr_type = VT_LLONG, load_size = 8, load_type = VT_LLONG;
+#elif PTR_SIZE == 8
             if (((vtop->type.t & VT_BTYPE) == VT_QLONG) || ((vtop->type.t & VT_BTYPE) == VT_QFLOAT)) {
                 int addr_type = VT_LLONG, load_size = 8, load_type = ((vtop->type.t & VT_BTYPE) == VT_QLONG) ? VT_LLONG : VT_DOUBLE;
 #else
@@ -1292,6 +1303,9 @@ static int rc_fret(int t)
     if (t == VT_LDOUBLE) {
         return RC_ST0;
     }
+#elif defined TCC_TARGET_RISCV64
+    if (t == VT_LDOUBLE)
+      return RC_IRET;
 #endif
     return RC_FRET;
 }
@@ -1304,6 +1318,9 @@ static int reg_fret(int t)
     if (t == VT_LDOUBLE) {
         return TREG_ST0;
     }
+#elif defined TCC_TARGET_RISCV64
+    if (t == VT_LDOUBLE)
+      return REG_IRET;
 #endif
     return REG_FRET;
 }
@@ -1409,6 +1426,9 @@ static void gv_dup(void)
             if ((t & VT_BTYPE) == VT_LDOUBLE) {
                 rc = RC_ST0;
             }
+#elif defined TCC_TARGET_RISCV64
+            if ((t & VT_BTYPE) == VT_LDOUBLE)
+              rc = RC_INT;
 #endif
             sv.type.t = t;
         }
@@ -3049,6 +3069,9 @@ ST_FUNC void vstore(void)
                 } else if ((ft & VT_BTYPE) == VT_QFLOAT) {
                     rc = RC_FRET;
                 }
+#elif defined TCC_TARGET_RISCV64
+                if (dbt == VT_LDOUBLE)
+                  rc = RC_INT;
 #endif
             }
             r = gv(rc);  /* generate value */
@@ -3067,7 +3090,10 @@ ST_FUNC void vstore(void)
                 vtop[-1].r = t | VT_LVAL;
             }
             /* two word case handling : store second register at word + 4 (or +8 for x86-64)  */
-#if PTR_SIZE == 8
+#ifdef TCC_TARGET_RISCV64
+            if (dbt == VT_QLONG || dbt == VT_LDOUBLE) {
+                int addr_type = VT_LLONG, load_size = 8, load_type = VT_LLONG;
+#elif PTR_SIZE == 8
             if (((ft & VT_BTYPE) == VT_QLONG) || ((ft & VT_BTYPE) == VT_QFLOAT)) {
                 int addr_type = VT_LLONG, load_size = 8, load_type = ((vtop->type.t & VT_BTYPE) == VT_QLONG) ? VT_LLONG : VT_DOUBLE;
 #else
@@ -4664,6 +4690,18 @@ ST_FUNC void unary(void)
             }
         }
         break;
+#ifdef TCC_TARGET_RISCV64
+    case TOK_builtin_va_start:
+        parse_builtin_params(0, "ee");
+        r = vtop->r & VT_VALMASK;
+        if (r == VT_LLOCAL)
+            r = VT_LOCAL;
+        if (r != VT_LOCAL)
+            tcc_error("__builtin_va_start expects a local variable");
+        gen_va_start();
+	vstore();
+        break;
+#endif
 #ifdef TCC_TARGET_X86_64
 #ifdef TCC_TARGET_PE
     case TOK_builtin_va_start:
@@ -5235,6 +5273,9 @@ static void expr_cond(void)
                 if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE) {
                     rc = RC_ST0;
                 }
+#elif defined TCC_TARGET_RISCV64
+                if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE)
+                  rc = RC_INT;
 #endif
             } else
                 rc = RC_INT;
@@ -5346,6 +5387,9 @@ static void expr_cond(void)
                 if ((type.t & VT_BTYPE) == VT_LDOUBLE) {
                     rc = RC_ST0;
                 }
+#elif defined TCC_TARGET_RISCV64
+                if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE)
+                  rc = RC_INT;
 #endif
             } else if ((type.t & VT_BTYPE) == VT_LLONG) {
                 /* for long longs, we use fixed registers to avoid having

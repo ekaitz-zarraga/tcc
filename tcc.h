@@ -426,6 +426,7 @@ typedef struct SValue {
     CValue c;              /* constant, if VT_CONST */
     struct Sym *sym;       /* symbol, if (VT_SYM | VT_CONST), or if
     			      result of unary() for an identifier. */
+    unsigned short cmp_r; // TODO
 } SValue;
 
 struct Attribute {
