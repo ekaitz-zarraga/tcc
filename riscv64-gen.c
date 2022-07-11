@@ -15,11 +15,11 @@
 #define RC_F(x) (1 << (10 + (x))) // x = 0..7
 
 #define RC_IRET (RC_R(0)) // int return register class
-#define RC_IRE2 (RC_R(1)) // int 2nd return register class
+#define RC_LRET (RC_R(1)) // int 2nd return register class
 #define RC_FRET (RC_F(0)) // float return register class
 
 #define REG_IRET (TREG_R(0)) // int return register number
-#define REG_IRE2 (TREG_R(1)) // int 2nd return register number
+#define REG_LRET (TREG_R(1)) // int 2nd return register number
 #define REG_FRET (TREG_F(0)) // float return register number
 
 #define PTR_SIZE 8
@@ -506,9 +506,12 @@ static void reg_pass_rec(CType *type, int *rc, int *fieldofs, int ofs)
 {
     if ((type->t & VT_BTYPE) == VT_STRUCT) {
         Sym *f;
-        if (type->ref->type.t == VT_UNION)
-          rc[0] = -1;
-        else for (f = type->ref->next; f; f = f->next)
+        // TODO We can't check if something is a union or not, so treat it like
+        // a struct
+        // if (type->ref->type.t == VT_UNION)
+        //   rc[0] = -1;
+        // else 
+        for (f = type->ref->next; f; f = f->next)
           reg_pass_rec(&f->type, rc, fieldofs, ofs + f->c);
     } else if (type->t & VT_ARRAY) {
         if (type->ref->c < 0 || type->ref->c > 2)
@@ -770,9 +773,9 @@ done:
 
 static int func_sub_sp_offset, num_va_regs, func_va_list_ofs;
 
-ST_FUNC void gfunc_prolog(Sym *func_sym)
+ST_FUNC void gfunc_prolog(CType *func_type)
 {
-    CType *func_type = &func_sym->type;
+    Sym *func_sym = func_type->ref;
     int i, addr, align, size;
     int param_addr = 0;
     int areg[2];
@@ -1148,6 +1151,20 @@ ST_FUNC void gen_opl(int op)
 {
     gen_opil(op, 1);
 }
+
+
+// TODO: These two functions were defined in tccgen.c in mob branch---
+ST_FUNC Sym *external_helper_sym(int v)
+{
+    CType ct = { VT_FUNC, NULL };
+    return external_global_sym(v, &ct, 0);
+}
+
+ST_FUNC void vpush_helper_func(int v)
+{
+    vpushsym(&func_old_type, external_helper_sym(v));
+}
+//------------------------------------------------------------ENDTODO
 
 ST_FUNC void gen_opf(int op)
 {
