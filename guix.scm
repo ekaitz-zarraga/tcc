@@ -30,6 +30,58 @@
 
 (define libccross (cross-libc "riscv64-linux-gnu"))
 
+(define-public tcc-mine-native
+  (package
+    (name "tcc")                                  ;aka. "tinycc"
+    (version "0.9.27-HEAD")
+    (source (local-file %source-dir
+                        #:recursive? #t
+                        #:select? discard-git))
+    (build-system gnu-build-system)
+    (native-inputs (list perl texinfo which))
+    (arguments
+      `(#:configure-flags (list (string-append "--elfinterp="
+                                               (assoc-ref %build-inputs "libc")
+                                               ,(glibc-dynamic-linker))
+                                (string-append "--crtprefix="
+                                               (assoc-ref %build-inputs "libc")
+                                               "/lib")
+                                (string-append "--sysincludepaths="
+                                               (assoc-ref %build-inputs "libc")
+                                               "/include:"
+                                               (assoc-ref %build-inputs
+                                                          "kernel-headers")
+                                               "/include:{B}/include")
+                                (string-append "--libpaths="
+                                               (assoc-ref %build-inputs "libc")
+                                               "/lib")
+                                ,@(if (string-prefix? "armhf-linux"
+                                                      (or (%current-target-system)
+                                                          (%current-system)))
+                                    `("--triplet=arm-linux-gnueabihf")
+                                    '()))
+        #:test-target "test"))
+    (native-search-paths
+      (list (search-path-specification
+              (variable "CPATH")
+              (files '("include")))
+            (search-path-specification
+              (variable "LIBRARY_PATH")
+              (files '("lib" "lib64")))))
+
+    (synopsis "Tiny and fast C compiler")
+    (description
+      "TCC, also referred to as \"TinyCC\", is a small and fast C compiler
+      written in C.  It supports ANSI C with GNU and extensions and most of the C99
+      standard.")
+      (home-page "http://www.tinycc.org/")
+      ;; An attempt to re-licence tcc under the Expat licence is underway but not
+      ;; (if ever) complete.  See the RELICENSING file for more information.
+      (license license:lgpl2.1+)))
+
+
+
+
 (define-public tcc-mine
   (package
     (name "tcc")                                  ;aka. "tinycc"
@@ -44,21 +96,7 @@
         #:configure-flags
         #~(list "--enable-cross"
                 "--disable-rpath"
-                ;; TODO: no support for RV? maybe add it by hand? do I need a dynamic linker?
-                #;(string-append "--elfinterp="
-                               #$libccross
-                               (glibc-dynamic-linker))
-
-                ;; These we may need to set in the config-extra.mak
-                #;(string-append "--crtprefix="
-                               #$libccross "/lib")
-                #;(string-append "--sysincludepaths="
-                               #$libccross "/include:"
-                               (assoc-ref %build-inputs "kernel-headers")
-                               "/include:{B}/include")
-                #;(string-append "--libpaths="
-                               #$libccross "/lib:"
-                               #$output "/lib"))
+                "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1")
         #:tests? #f
         #:validate-runpath? #f
         #:phases #~(modify-phases %standard-phases
@@ -87,8 +125,6 @@
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              (install-file "tcc.1"
-                                            (string-append (assoc-ref outputs "out") "/share/man"))
                               (install-file "riscv64-libtcc1.a"
                                             (string-append (assoc-ref outputs "out") "/lib/tcc"))
                               (install-file "riscv64-tcc"
