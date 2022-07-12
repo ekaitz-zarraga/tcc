@@ -44,9 +44,22 @@
         #~(list 
             "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1"
             "--disable-rpath")
-        #:tests? #f
+        #:test-target "test"
         #:validate-runpath? #f
-        ))
+        #:phases
+        #~(modify-phases
+            %standard-phases
+            (replace 'build
+              (lambda _
+                (invoke "./build-gcc.sh")))
+            (replace 'install
+              (lambda* (#:key inputs outputs #:allow-other-keys)
+                       (install-file "libtcc1.a"
+                                     (string-append (assoc-ref outputs "out") "/lib/tcc"))
+                       (install-file "tcc"
+                                     (string-append (assoc-ref outputs "out") "/bin"))
+                       (copy-recursively "include"
+                                         (string-append (assoc-ref outputs "out") "/include")))) )))
     (native-search-paths
      (list (search-path-specification
             (variable "CPATH")
@@ -64,6 +77,9 @@ standard.")
     ;; An attempt to re-licence tcc under the Expat licence is underway but not
     ;; (if ever) complete.  See the RELICENSING file for more information.
     (license license:lgpl2.1+)))
+
+
+
 (define-public tcc-mine
   (package
     (name "tcc")                                  ;aka. "tinycc"
@@ -107,8 +123,6 @@ standard.")
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              (install-file "tcc.1"
-                                            (string-append (assoc-ref outputs "out") "/share/man"))
                               (install-file "riscv64-libtcc1.a"
                                             (string-append (assoc-ref outputs "out") "/lib/tcc"))
                               (install-file "riscv64-tcc"
@@ -135,4 +149,4 @@ standard.")
 
 
 
-tcc-mine
+tcc-mine-native
