@@ -41,7 +41,7 @@
     (arguments
       (list
         #:configure-flags
-        #~(list 
+        #~(list
             "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1"
             "--disable-rpath")
         #:test-target "test"
@@ -106,7 +106,7 @@ standard.")
                    ;; configuration like explained in `make help`
                    (add-before 'configure 'configure-cross
                      (lambda _
-                        (call-with-output-file "cross-extra.mak"
+                        (call-with-output-file "config-cross.mak"
                           (lambda (port)
                             (display
                               (string-append "CRT-riscv64 = " #$libccross "/lib") port)
@@ -149,4 +149,4 @@ standard.")
 
 
 
-tcc-mine-native
+tcc-mine
