@@ -117,7 +117,7 @@
                               (string-append "LIB-riscv64 = " #$libccross "/lib") port)
                             (newline port)
                             (display
-                              (string-append "INC-riscv64 = " #$libccross "/include" ":{B}/include") port)))))
+                              (string-append "INC-riscv64 = " #$libccross "/include" ":" #$output "/include") port)))))
 
                    ;(add-before 'install 'fail (lambda _ (error "Fail for debug")))
 
