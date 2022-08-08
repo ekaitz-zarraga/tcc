@@ -123,7 +123,16 @@ standard.")
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              #;(install-file "riscv64-libtcc1.a"
+                              ;; Make an empty libtcc1. Needed because:
+                              ;; - Later it'll try to dynamically link it (needed)
+                              ;; - It only has i386 related definitions, and fails if it's compiled in other arch (make it empty)
+                              (call-with-output-file "lib/libtcc1.c"
+                                (lambda (p) (display "" p)))
+                              (invoke "./riscv64-tcc" "-c" "lib/libtcc1.c" "-o" "libtcc1.o")
+                              (invoke "./riscv64-tcc" "-ar" "cr" "libtcc1-riscv64.a" "libtcc1.o")
+
+                              ;; Now install
+                              (install-file "libtcc1-riscv64.a"
                                             (string-append (assoc-ref outputs "out") "/lib/tcc"))
                               (install-file "riscv64-tcc"
                                             (string-append (assoc-ref outputs "out") "/bin"))
