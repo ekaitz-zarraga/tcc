@@ -169,20 +169,97 @@ void gsym(int t)
   gsym_addr(t, ind);
 }
 
+
+static int negcc(int cc)
+{
+  switch(cc)
+  {
+    case TOK_ULT:
+      return TOK_UGE;
+    case TOK_UGE:
+      return TOK_ULT;
+    case TOK_EQ:
+      return TOK_NE;
+    case TOK_NE:
+      return TOK_EQ;
+    case TOK_ULE:
+      return TOK_UGT;
+    case TOK_UGT:
+      return TOK_ULE;
+    case TOK_Nset:
+      return TOK_Nclear;
+    case TOK_Nclear:
+      return TOK_Nset;
+    case TOK_LT:
+      return TOK_GE;
+    case TOK_GE:
+      return TOK_LT;
+    case TOK_LE:
+      return TOK_GT;
+    case TOK_GT:
+      return TOK_LE;
+  }
+  tcc_error("unexpected condition code");
+  return TOK_NE;
+}
 /* TODO */
 /* generate a test. set 'inv' to invert test. Stack entry is popped */
 int gtst(int inv, int t)
 {
+  // I'd love be sure of what's `t` -> I think it's the jump target. In all the
+  // gtst calls I see it's `0` but then when other things are called it's set
+  // to another value and returned, so it might be that: the test doesn't need
+  // to jump until we insert instructions after it...?
   int v = vtop->r & VT_VALMASK;
+  int r=ind;
+  // What's `ind`? the current location in the code (it looks like because
+  // it's incremented in o()
 
   if (nocode_wanted) {
     ;
   } else if (v == VT_CMP) {
       /* TODO */
+      /*
+       * vtop->c.i  contains the kind of the operation we need to do (we need
+       * to invert it if we have `inv` set, we can use `negcc` for that
+       *  - TOK_ULT
+       *  - TOK_UGE
+       *  - TOK_EQ
+       *  - TOK_NE
+       *  - TOK_ULE
+       *  - TOK_UGT
+       *  - TOK_Nset
+       *  - TOK_Nclear
+       *  - TOK_LT
+       *  - TOK_GE
+       *  - TOK_LE
+       *  - TOK_GT
+       *  We generate the operation with that, and we need to insert the branch
+       *  too: then o(operation) to generate the code.
+       *  The branch is obtained from:
+       *  - r -> position
+       *  - t -> address
+       *  - fail -> for the case that the jump is too large to be encoded here
+       *     `- That should load the address in steps and all that, but arm
+       *        doesn't implement that yet, so we won't
+       */
+       t=r;
   } else if (v == VT_JMP || v == VT_JMPI) {
-      /* TODO: Optimization for && or || removed ftm */
-      t = gjmp(t);
-      gsym(vtop->c.i);
+
+      // && and || optimization I don't understand
+      /* Check if jump taken (v&1) is and the inverted test match */
+      if ((v & 1) == inv) {
+          if(!vtop->c.i)
+              vtop->c.i=t;
+          else{
+              // DOES SOME WEIRD INSTRUCTION DECODING HERE -> patching previous
+              // jumps?
+          }
+      } else {
+          // Just jump?
+          t = gjmp(t);
+          gsym(vtop->c.i);
+      }
   }
   vtop--;
   return t;
