@@ -798,6 +798,18 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s, "i386", NULL);
 #elif defined(TCC_TARGET_X86_64)
     tcc_define_symbol(s, "__x86_64__", NULL);
+#elif defined(TCC_TARGET_RISCV64)
+    tcc_define_symbol(s, "__riscv", NULL);
+    tcc_define_symbol(s, "__riscv_xlen", "64");
+    tcc_define_symbol(s, "__riscv_flen", "64");
+    tcc_define_symbol(s, "__riscv_div", NULL);
+    tcc_define_symbol(s, "__riscv_mul", NULL);
+    tcc_define_symbol(s, "__riscv_fdiv", NULL);
+    tcc_define_symbol(s, "__riscv_fsqrt", NULL);
+    tcc_define_symbol(s, "__riscv_float_abi_double", NULL);
+    // This should be defined for every target but in riscv <wordsize.h>
+    // uses it to compare against __riscv_xlen, so we really need it.
+    tcc_define_symbol(s, "__SIZEOF_POINTER__", "8");
 #elif defined(TCC_TARGET_ARM)
     tcc_define_symbol(s, "__ARM_ARCH_4__", NULL);
     tcc_define_symbol(s, "__arm_elf__", NULL);
