@@ -191,6 +191,43 @@ static int negcc(int cc)
   tcc_error("unexpected condition code");
   return TOK_NE;
 }
+
+ST_FUNC int gjmp_cond(int op, int t)
+{
+    int tmp;
+    int a = vtop->r & 0xff;
+    int b = (vtop->r >> 8) & 0xff;
+    switch (op) {
+        case TOK_ULT: op = 6; break;
+        case TOK_UGE: op = 7; break;
+        case TOK_ULE: op = 7; tmp = a; a = b; b = tmp; break;
+        case TOK_UGT: op = 6; tmp = a; a = b; b = tmp; break;
+        case TOK_LT:  op = 4; break;
+        case TOK_GE:  op = 5; break;
+        case TOK_LE:  op = 5; tmp = a; a = b; b = tmp; break;
+        case TOK_GT:  op = 4; tmp = a; a = b; b = tmp; break;
+        case TOK_NE:  op = 1; break;
+        case TOK_EQ:  op = 0; break;
+    }
+    o(0x63 | (op ^ 1) << 12 | a << 15 | b << 20 | 8 << 7); // bOP a,b,+4
+    return gjmp(t);
+}
+
+ST_FUNC int gjmp_append(int n, int t)
+{
+    void *p;
+    /* insert jump list n into t */
+    if (n) {
+        uint32_t n1 = n, n2;
+        while ((n2 = read32le(p = cur_text_section->data + n1)))
+            n1 = n2;
+        write32le(p, t);
+        t = n;
+    }
+    return t;
+}
+
+
 /* TODO */
 /* generate a test. set 'inv' to invert test. Stack entry is popped */
 int gtst(int inv, int t)
@@ -201,12 +238,15 @@ int gtst(int inv, int t)
   // to jump until we insert instructions after it...?
   int v = vtop->r & VT_VALMASK;
   int r=ind;
+  int p;
   // What's `ind`? the current location in the code (it looks like because
   // it's incremented in o()
 
   if (nocode_wanted) {
     ;
   } else if (v == VT_CMP) {
+      t = gjmp_cond(v ^ inv, t);
+      // THIS IS WRONG: It's not generating a BNEZ but a random thingie
       /* TODO */
       /*
        * vtop->c.i  contains the kind of the operation we need to do (we need
@@ -232,7 +272,6 @@ int gtst(int inv, int t)
        *     `- That should load the address in steps and all that, but arm
        *        doesn't implement that yet, so we won't
        */
-       t=r;
   } else if (v == VT_JMP || v == VT_JMPI) {
 
       // && and || optimization I don't understand
@@ -243,6 +282,8 @@ int gtst(int inv, int t)
           else{
               // DOES SOME WEIRD INSTRUCTION DECODING HERE -> patching previous
               // jumps?
+              p = vtop->c.i;
+              t=gjmp_append( p, t);
           }
       } else {
           // Just jump?
@@ -1065,20 +1106,6 @@ ST_FUNC void gjmp_addr(int a)
             | (((r >> 20) &     1) << 31);
         o(0x6f | imm); // jal x0, imm ==  j imm
     }
-}
-
-ST_FUNC int gjmp_append(int n, int t)
-{
-    void *p;
-    /* insert jump list n into t */
-    if (n) {
-        uint32_t n1 = n, n2;
-        while ((n2 = read32le(p = cur_text_section->data + n1)))
-            n1 = n2;
-        write32le(p, t);
-        t = n;
-    }
-    return t;
 }
 
 static void gen_opil(int op, int ll)
