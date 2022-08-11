@@ -238,16 +238,13 @@ int gtst(int inv, int t)
   // to jump until we insert instructions after it...?
   int v = vtop->r & VT_VALMASK;
   int r=ind;
-  int p;
   // What's `ind`? the current location in the code (it looks like because
   // it's incremented in o()
 
   if (nocode_wanted) {
     ;
   } else if (v == VT_CMP) {
-      t = gjmp_cond(v ^ inv, t);
-      // THIS IS WRONG: It's not generating a BNEZ but a random thingie
-      /* TODO */
+      t = gjmp_cond(inv? negcc(vtop->c.i):vtop->c.i, t);
       /*
        * vtop->c.i  contains the kind of the operation we need to do (we need
        * to invert it if we have `inv` set, we can use `negcc` for that
@@ -282,8 +279,7 @@ int gtst(int inv, int t)
           else{
               // DOES SOME WEIRD INSTRUCTION DECODING HERE -> patching previous
               // jumps?
-              p = vtop->c.i;
-              t=gjmp_append( p, t);
+              t=gjmp_append(vtop->c.i, t);
           }
       } else {
           // Just jump?
