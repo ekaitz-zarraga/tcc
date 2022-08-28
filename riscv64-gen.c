@@ -195,8 +195,10 @@ static int negcc(int cc)
 ST_FUNC int gjmp_cond(int op, int t)
 {
     int tmp;
-    int a = vtop->r & 0xff;
-    int b = (vtop->r >> 8) & 0xff;
+    // TODO obtain a and b properly
+    int v = vtop->r & VT_VALMASK;
+    int a = vtop->cmp_r & 0xff;
+    int b = (vtop->cmp_r >> 8) & 0xff;
     switch (op) {
         case TOK_ULT: op = 6; break;
         case TOK_UGE: op = 7; break;
@@ -450,8 +452,8 @@ ST_FUNC void load(int r, SValue *sv)
     } else if (v == VT_CMP) {
         // TODO cmp_op not defined in vtop!
         int op = vtop->c.i;
-        int a = vtop->r & 0xff;
-        int b = (vtop->r >> 8) & 0xff;
+        int a = vtop->cmp_r & 0xff;
+        int b = (vtop->cmp_r >> 8) & 0xff;
         int inv = 0;
         switch (op) {
             case TOK_ULT:
@@ -1135,6 +1137,7 @@ static void gen_opil(int op, int ll)
                     if (op >= TOK_ULT && op <= TOK_GT) {
                       vtop->r = VT_CMP;
                       vtop->c.i = op;
+                      vtop->cmp_r = ireg(d) | 0 << 8;
                     } else
                       vtop[0].r = d;
                     return;
@@ -1170,6 +1173,7 @@ static void gen_opil(int op, int ll)
                     --vtop;
                     vtop->r = VT_CMP;
                     vtop->c.i = op;
+                    vtop->cmp_r = a | 0 << 8;
                     return;
             }
         }
@@ -1187,6 +1191,7 @@ static void gen_opil(int op, int ll)
         if (op >= TOK_ULT && op <= TOK_GT) {
             vtop->r = VT_CMP;
             vtop->c.i = op;
+            vtop->cmp_r = a | b << 8;
             break;
         }
         tcc_error("implement me: %s(%s)", __FUNCTION__, get_tok_str(op, NULL));
