@@ -146,6 +146,7 @@ standard.")
             (variable "LIBRARY_PATH")
             (files '("lib" "lib64")))))
 
+    (outputs (list "out" "debug"))
     (synopsis "Tiny and fast C compiler")
     (description
      "TCC, also referred to as \"TinyCC\", is a small and fast C compiler
