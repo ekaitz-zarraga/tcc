@@ -11,7 +11,9 @@
              (gnu packages base)
              (gnu packages linux)
              (gnu packages maths)
+             (gnu packages mes)
              (gnu packages perl)
+             (gnu packages guile)
              (gnu packages cross-base)
              (gnu packages bootstrap)
              (gnu packages texinfo))
@@ -77,6 +79,7 @@ standard.")
     ;; An attempt to re-licence tcc under the Expat licence is underway but not
     ;; (if ever) complete.  See the RELICENSING file for more information.
     (license license:lgpl2.1+)))
+
 
 
 
@@ -158,4 +161,90 @@ standard.")
 
 
 
-tcc-mine
+
+(define-public tcc-mine-mes
+  (package
+    (name "tcc")                                  ;aka. "tinycc"
+    (version "riscv-mes-HEAD")
+    (source (local-file %source-dir
+              #:recursive? #t
+              #:select? discard-git))
+    (build-system gnu-build-system)
+    (native-inputs (list  mes guile-3.0-latest perl texinfo which))
+    (arguments
+      (list
+        #:configure-flags
+        #~(list "--enable-cross"
+                "--disable-rpath"
+                "--cc=mescc"
+                "--ar=mesar"
+                "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1")
+        #:tests? #f
+        #:validate-runpath? #f
+        #:phases #~(modify-phases %standard-phases
+                   (replace 'build
+                     (lambda _
+                       (invoke "make" "cross-riscv64")))
+
+
+                   (add-before 'configure 'setenv
+                     (lambda _
+                        (setenv "MES" "guile")))
+
+                   ;; Cross compilers don't get the default config so we need to add custom
+                   ;; configuration like explained in `make help`
+                   (add-before 'configure 'configure-cross
+                     (lambda _
+                        (call-with-output-file "config-cross.mak"
+                          (lambda (port)
+                            (display
+                              (string-append "CRT-riscv64 = " #$libccross "/lib") port)
+                            (newline port)
+                            (display
+                              (string-append "LIB-riscv64 = " #$libccross "/lib") port)
+                            (newline port)
+                            (display
+                              (string-append "INC-riscv64 = " #$libccross "/include" ":" #$output "/include") port)))))
+
+                   ;(add-before 'install 'fail (lambda _ (error "Fail for debug")))
+
+                   ;; Default `make install` phase does not install the cross compilers
+                   ;; We have to do it by hand
+                   (replace 'install
+                     (lambda* (#:key inputs outputs #:allow-other-keys)
+                              ;; Make an empty libtcc1. Needed because:
+                              ;; - Later it'll try to dynamically link it (needed)
+                              ;; - It only has i386 related definitions, and fails if it's compiled in other arch (make it empty)
+                              (call-with-output-file "lib/libtcc1.c"
+                                (lambda (p) (display "" p)))
+                              (invoke "./riscv64-tcc" "-c" "lib/libtcc1.c" "-o" "libtcc1.o")
+                              (invoke "./riscv64-tcc" "-ar" "cr" "libtcc1-riscv64.a" "libtcc1.o")
+
+                              ;; Now install
+                              (install-file "libtcc1-riscv64.a"
+                                            (string-append (assoc-ref outputs "out") "/lib/tcc"))
+                              (install-file "riscv64-tcc"
+                                            (string-append (assoc-ref outputs "out") "/bin"))
+                              (copy-recursively "include"
+                                            (string-append (assoc-ref outputs "out") "/include")))))))
+    (native-search-paths
+     (list (search-path-specification
+            (variable "CPATH")
+            (files '("include")))
+           (search-path-specification
+            (variable "LIBRARY_PATH")
+            (files '("lib" "lib64")))))
+
+    (synopsis "Tiny and fast C compiler")
+    (description
+     "TCC, also referred to as \"TinyCC\", is a small and fast C compiler
+written in C.  It supports ANSI C with GNU and extensions and most of the C99
+standard.")
+    (home-page "http://www.tinycc.org/")
+    ;; An attempt to re-licence tcc under the Expat licence is underway but not
+    ;; (if ever) complete.  See the RELICENSING file for more information.
+    (license license:lgpl2.1+)))
+
+
+
+tcc-mine-mes

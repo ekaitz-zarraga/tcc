@@ -383,13 +383,13 @@ fi
 
 # a final configuration tuning
 if ! echo "$cc" | grep -q "tcc"; then
-  OPT1="-Wdeclaration-after-statement -fno-strict-aliasing"
-  # we want -Wno- but gcc does not always reject unknown -Wno- options
-  OPT2="-Wpointer-sign -Wsign-compare -Wunused-result"
-  if echo "$cc" | grep -q "clang"; then
-    OPT1="$OPT1 -fheinous-gnu-extensions"
-    OPT2="$OPT2 -Wstring-plus-int"
-  fi
+  # OPT1="-Wdeclaration-after-statement -fno-strict-aliasing"
+  # # we want -Wno- but gcc does not always reject unknown -Wno- options
+  # OPT2="-Wpointer-sign -Wsign-compare -Wunused-result"
+  # if echo "$cc" | grep -q "clang"; then
+  #   OPT1="$OPT1 -fheinous-gnu-extensions"
+  #   OPT2="$OPT2 -Wstring-plus-int"
+  # fi
   $cc $OPT1 $OPT2 -o a.out -c -xc - < /dev/null > cc_msg.txt 2>&1
   for o in $OPT1; do # enable these options
     if ! grep -q -- $o cc_msg.txt; then CFLAGS="$CFLAGS $o"; fi
