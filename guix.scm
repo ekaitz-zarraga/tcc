@@ -178,7 +178,9 @@ standard.")
                 "--disable-rpath"
                 "--cc=mescc"
                 "--ar=mesar"
-                "--extra-cflags=-Dinline="
+                "--enable-static"
+                "--extra-cflags=-Dinline= -static"
+                "--extra-ldflags=-lc+tcc -ltcc1 -lgetopt"
                 ;"--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1"
                 )
         #:tests? #f

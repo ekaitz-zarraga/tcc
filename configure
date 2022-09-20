@@ -50,6 +50,7 @@ gcc_minor=0
 
 # OS specific
 targetos=`uname`
+confvars="$confvars ldl=no"
 case $targetos in
   Darwin)
     confvars="$confvars OSX"
