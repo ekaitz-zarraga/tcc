@@ -208,9 +208,9 @@ case "$cpu" in
 esac
 
 # Checking for CFLAGS
-if test -z "$CFLAGS"; then
-    CFLAGS="-Wall -g -O2"
-fi
+#if test -z "$CFLAGS"; then
+#    CFLAGS="-Wall -g -O2"
+#fi
 
 if test "$mingw32" = "yes" ; then
     if test "$source_path_used" = "no"; then
