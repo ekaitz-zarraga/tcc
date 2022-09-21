@@ -179,8 +179,8 @@ standard.")
                 "--cc=mescc"
                 "--ar=mesar"
                 "--enable-static"
-                "--extra-cflags=-Dinline= -DONE_SOURCE=1 -v -v"
-                "--extra-ldflags=-lc+tcc -ltcc1 -lgetopt -static"
+                "--extra-cflags=-Dinline= -DONE_SOURCE=1"
+                "--extra-ldflags=-lc+tcc -lgetopt -static"
                 ;"--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1"
                 )
         #:tests? #f
@@ -216,13 +216,7 @@ standard.")
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              ;; Make an empty libtcc1. Needed because:
-                              ;; - Later it'll try to dynamically link it (needed)
-                              ;; - It only has i386 related definitions, and fails if it's compiled in other arch (make it empty)
-                              (call-with-output-file "lib/libtcc1.c"
-                                (lambda (p) (display "" p)))
-                              (invoke "./riscv64-tcc" "-c" "lib/libtcc1.c" "-o" "libtcc1.o")
-                              (invoke "./riscv64-tcc" "-ar" "cr" "libtcc1-riscv64.a" "libtcc1.o")
+                              (copy-file (string-append #$mes "/lib/x86_64-mes/libtcc1.a") "libtcc1-riscv64.a")
 
                               ;; Now install
                               (install-file "libtcc1-riscv64.a"
