@@ -1,0 +1,38 @@
+From 8874c7b68b9d56f9556bc1a8171183efb3086a1b Mon Sep 17 00:00:00 2001
+From: Ekaitz Zarraga <ekaitz@elenq.tech>
+Date: Wed, 21 Sep 2022 09:43:43 +0200
+Subject: [PATCH] mescc: Add missing assembly defines for TinyCC compilation
+
+* lib/x86_64-mes/x86_64.M1: Add missing assembly defines.
+---
+ lib/x86_64-mes/x86_64.M1 | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/lib/x86_64-mes/x86_64.M1 b/lib/x86_64-mes/x86_64.M1
+index 9ffbbf15..64997c55 100644
+--- a/lib/x86_64-mes/x86_64.M1
++++ b/lib/x86_64-mes/x86_64.M1
+@@ -1,6 +1,7 @@
+ ### GNU Mes --- Maxwell Equations of Software
+ ### Copyright © 2018 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+ ### Copyright © 2018 Peter De Wachter <pdewacht@gmail.com>
++### Copyright © 2022 Ekaitz Zarraga <ekaitz@elenq.tech>
+ ###
+ ### This file is part of GNU Mes.
+ ###
+@@ -147,6 +148,10 @@ DEFINE mov____0x8(%rbp),%rsp 488b65
+ DEFINE mov____0x8(%rdi),%rax 488b47
+ DEFINE mov____0x8(%rdi),%rbp 488b6f
+ DEFINE mov____0x8(%rdi),%rsp 488b67
++DEFINE mov____(%rax),%si 668b30
++DEFINE mov____(%rax),%sil 408a30
++DEFINE mov____%si,(%rdi) 668937
++DEFINE mov____%sil,(%rdi) 448837
+ DEFINE movl___%eax,0x32 890425
+ DEFINE movl___%edi,0x32 893c25
+ DEFINE movl___%esi,(%rdi) 8937
+
+base-commit: aa5f1533e1736a89e60d2c34c2a0ab3b01f8d037
+-- 
+2.37.3
+

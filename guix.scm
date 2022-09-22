@@ -7,6 +7,7 @@
              (guix download)
              (guix build-system gnu)
              ((guix licenses) #:prefix license:)
+             (gnu packages)
              (gnu packages gcc)
              (gnu packages base)
              (gnu packages linux)
@@ -161,6 +162,19 @@ standard.")
 
 
 
+(define-public mes-mine
+  (package
+    (inherit mes)
+    (version (package-version mes))
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnu/mes/"
+                                  "mes-" version ".tar.gz"))
+              (patches (search-patches "/home/Ekaitz/projects/nlnet/mes/0001-mescc-Add-missing-assembly-defines-for-TinyCC-compil.patch"))
+              (sha256
+               (base32
+                "00lrpm4x5qg0l840zhbf9mr67mqhp8gljcl24j5dy0y109gf32w2"))))))
+
 
 (define-public tcc-mine-mes
   (package
@@ -170,7 +184,7 @@ standard.")
               #:recursive? #t
               #:select? discard-git))
     (build-system gnu-build-system)
-    (native-inputs (list  mes guile-3.0-latest perl texinfo which))
+    (native-inputs (list  mes-mine guile-3.0-latest perl texinfo which))
     (arguments
       (list
         #:configure-flags
