@@ -173,7 +173,7 @@ standard.")
               (patches (search-patches "/home/Ekaitz/projects/nlnet/mes/0001-mescc-Add-missing-assembly-defines-for-TinyCC-compil.patch"))
               (sha256
                (base32
-                "00lrpm4x5qg0l840zhbf9mr67mqhp8gljcl24j5dy0y109gf32w2"))))))
+                "0d855agwawjjzwbjmvb5xlbwg77zdpwbjm9kjxc2wqvn0vmhq4im"))))))
 
 
 (define-public tcc-mine-mes
@@ -230,7 +230,7 @@ standard.")
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              (copy-file (string-append #$mes "/lib/x86_64-mes/libtcc1.a") "libtcc1-riscv64.a")
+                              (copy-file (string-append #$mes "/lib/libtcc1.a") "libtcc1-riscv64.a")
 
                               ;; Now install
                               (install-file "libtcc1-riscv64.a"
