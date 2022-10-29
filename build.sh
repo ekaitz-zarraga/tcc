@@ -138,7 +138,6 @@ CC="./mes-tcc"
 AR="./mes-tcc -ar"
 CPPFLAGS="
 -I $MES_PREFIX/include
--I $MES_PREFIX/include/$mes_kernel/$mes_cpu
 -I $MES_PREFIX/lib
 -D BOOTSTRAP=1
 "

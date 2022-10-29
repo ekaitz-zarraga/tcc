@@ -77,7 +77,6 @@ export REBUILD_LIBC
 CC=${CC-${cross_prefix}gcc}
 CPPFLAGS="
 -I $MES_PREFIX/include
--I $MES_PREFIX/include/$mes_kernel/$mes_cpu
 -I $MES_PREFIX/lib
 -D BOOTSTRAP=1
 "
