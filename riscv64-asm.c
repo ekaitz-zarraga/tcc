@@ -19,6 +19,7 @@ ST_FUNC void gen_le32(int c);
 #define USING_GLOBALS
 #include "tcc.h"
 
+
 /* XXX: make it faster ? */
 ST_FUNC void g(int c)
 {
@@ -75,20 +76,11 @@ static void asm_nullary_opcode(TCCState *s1, int token)
 
     // System calls
 
-    case TOK_ASM_scall: // I (pseudo)
+    case TOK_ASM_ecall: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12));
         return;
-    case TOK_ASM_sbreak: // I (pseudo)
+    case TOK_ASM_ebreak: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12) | (1 << 20));
-        return;
-
-    // Privileged Instructions
-
-    case TOK_ASM_ecall:
-        asm_emit_opcode((0x1C << 2) | 3 | (0 << 20));
-        return;
-    case TOK_ASM_ebreak:
-        asm_emit_opcode((0x1C << 2) | 3 | (1 << 20));
         return;
 
     // Other
@@ -106,10 +98,12 @@ enum {
     OPT_REG,
     OPT_IM12S,
     OPT_IM32,
+    OPT_IM20S,
 };
 #define OP_REG    (1 << OPT_REG)
 #define OP_IM32   (1 << OPT_IM32)
 #define OP_IM12S   (1 << OPT_IM12S)
+#define OP_IM20S   (1 << OPT_IM20S)
 
 typedef struct Operand {
     uint32_t type;
@@ -119,6 +113,11 @@ typedef struct Operand {
         ExprValue e;
     };
 } Operand;
+
+/* Fixed operands for pseudoinstructions */
+const Operand zero_imm = {OP_IM12S, {0}};
+const Operand zero = {OP_REG, {0}};
+
 
 /* Parse a text containing operand and store the result in OP */
 static void parse_operand(TCCState *s1, Operand *op)
@@ -137,14 +136,21 @@ static void parse_operand(TCCState *s1, Operand *op)
         /* constant value */
         next(); // skip '#' or '$'
     }
+
     asm_expr(s1, &e);
-    op->type = OP_IM32;
     op->e = e;
     if (!op->e.sym) {
         if ((int) op->e.v >= -2048 && (int) op->e.v < 2048)
             op->type = OP_IM12S;
-    } else
-        expect("operand");
+        else if ((int) op->e.v >= -1<<19 && (int) op->e.v < 1<<19)
+            op->type = OP_IM20S;
+        else
+            op->type = OP_IM32;
+        return;
+    } else {
+        /*TODO: Deal with offsets and stuff like that for the moment it's ok to
+         leave it like this as we are only taking the symbol case*/
+    }
 }
 
 #define ENCODE_RS1(register_index) ((register_index) << 15)
@@ -187,46 +193,29 @@ static void asm_unary_opcode(TCCState *s1, int token)
     }
 }
 
-static void asm_emit_u(int token, uint32_t opcode, const Operand* rd, const Operand* rs2)
+/* caller: Add funct3 into opcode */
+static void asm_emit_i(int token, uint32_t opcode, const Operand* rd, const Operand* rs1, const Operand* rs2)
 {
     if (rd->type != OP_REG) {
         tcc_error("'%s': Expected destination operand that is a register", get_tok_str(token, NULL));
         return;
     }
-    if (rs2->type != OP_IM12S && rs2->type != OP_IM32) {
-        tcc_error("'%s': Expected second source operand that is an immediate value", get_tok_str(token, NULL));
-        return;
-    } else if (rs2->e.v >= 0x100000) {
-        tcc_error("'%s': Expected second source operand that is an immediate value between 0 and 0xfffff", get_tok_str(token, NULL));
+    if (rs1->type != OP_REG) {
+        tcc_error("'%s': Expected first source operand that is a register", get_tok_str(token, NULL));
         return;
     }
-    /* U-type instruction:
-	      31...12 imm[31:12]
-	      11...7 rd
-	      6...0 opcode */
-    gen_le32(opcode | ENCODE_RD(rd->reg) | (rs2->e.v << 12));
-}
-
-static void asm_binary_opcode(TCCState* s1, int token)
-{
-    Operand ops[2];
-    parse_operand(s1, &ops[0]);
-    if (tok == ',')
-        next();
-    else
-        expect("','");
-    parse_operand(s1, &ops[1]);
-
-    switch (token) {
-    case TOK_ASM_lui:
-        asm_emit_u(token, (0xD << 2) | 3, &ops[0], &ops[1]);
+    if (rs2->type != OP_IM12S) {
+        tcc_error("'%s': Expected second source operand that is an immediate value between 0 and 4095", get_tok_str(token, NULL));
         return;
-    case TOK_ASM_auipc:
-        asm_emit_u(token, (0x05 << 2) | 3, &ops[0], &ops[1]);
-        return;
-    default:
-        expect("binary instruction");
     }
+    /* I-type instruction:
+	     31...20 imm[11:0]
+	     19...15 rs1
+	     14...12 funct3
+	     11...7 rd
+	     6...0 opcode */
+
+    gen_le32(opcode | ENCODE_RD(rd->reg) | ENCODE_RS1(rs1->reg) | (rs2->e.v << 20));
 }
 
 /* caller: Add funct3, funct7 into opcode */
@@ -254,29 +243,110 @@ static void asm_emit_r(int token, uint32_t opcode, const Operand* rd, const Oper
     gen_le32(opcode | ENCODE_RD(rd->reg) | ENCODE_RS1(rs1->reg) | ENCODE_RS2(rs2->reg));
 }
 
-/* caller: Add funct3 into opcode */
-static void asm_emit_i(int token, uint32_t opcode, const Operand* rd, const Operand* rs1, const Operand* rs2)
+
+static void asm_emit_u(int token, uint32_t opcode, const Operand* rd, const Operand* rs2)
 {
     if (rd->type != OP_REG) {
         tcc_error("'%s': Expected destination operand that is a register", get_tok_str(token, NULL));
         return;
     }
-    if (rs1->type != OP_REG) {
-        tcc_error("'%s': Expected first source operand that is a register", get_tok_str(token, NULL));
+    if (rs2->type != OP_IM12S && rs2->type != OP_IM32) {
+        tcc_error("'%s': Expected second source operand that is an immediate value", get_tok_str(token, NULL));
+        return;
+    } else if (rs2->e.v >= 0x100000) {
+        tcc_error("'%s': Expected second source operand that is an immediate value between 0 and 0xfffff", get_tok_str(token, NULL));
         return;
     }
-    if (rs2->type != OP_IM12S) {
-        tcc_error("'%s': Expected second source operand that is an immediate value between 0 and 4095", get_tok_str(token, NULL));
-        return;
-    }
-    /* I-type instruction:
-	     31...20 imm[11:0]
-	     19...15 rs1
-	     14...12 funct3
-	     11...7 rd
-	     6...0 opcode */
+    /* U-type instruction:
+	      31...12 imm[31:12]
+	      11...7 rd
+	      6...0 opcode */
+    gen_le32(opcode | ENCODE_RD(rd->reg) | (rs2->e.v << 12));
+}
 
-    gen_le32(opcode | ENCODE_RD(rd->reg) | ENCODE_RS1(rs1->reg) | (rs2->e.v << 20));
+static void gen_lla(int token, Operand* op1, Operand* op2) {
+    // 1. Generate the symbol first
+    // 2. Generate a R_RISCV_PCREL_HI20 relocation pointing to the auipc for
+    //    the symbol
+    // 3. Generate an auipc with 0x0
+    // 4. Generate a R_RISCV_PCREL_LO12_I relocation pointing to the addi for
+    //    the symbol
+    // 5. Generate an addi with 0x0
+    // OPTIONAL. Add R_RISCV_RELAX
+    //
+
+    Sym *sym, label = {0};
+    sym = op2->e.sym;
+    label.type.t = VT_VOID | VT_STATIC;
+    put_extern_sym(&label, cur_text_section, ind, 0);
+    greloca(cur_text_section, sym, ind, R_RISCV_PCREL_HI20, 0);
+    asm_emit_u(token, (0x05 << 2) | 3, op1, &zero_imm); // auipc rd, 0x0
+    greloca(cur_text_section, &label, ind, R_RISCV_PCREL_LO12_I, 0);
+    asm_emit_i(token, (4 << 2) | 3, op1, op1, &zero_imm); // addi rd, rd, 0x0
+
+    // NOTE: We need to use an empty label (see `label` above) for this to
+    // work, if we don't it fails saying the second relocation's value is not
+    // the same as the addr of the previous one, and it's true.
+    //
+    // It returns this if we use sym in both relocations:
+    // > PCREL_HI20: val=10230 addr=10260
+    // > PCREL_LO12_I: val=10230 addr=10264
+    // > tcc: error: unsupported hi/lo pcrel reloc scheme
+    //
+    // If we do it as in the code above it works properly.
+    // I don't know why it should be like this, but it happens to work
+}
+static void gen_jal(int token, Operand* op1, Operand* op2) {
+    Sym *sym;
+    sym = op2->e.sym;
+    greloca(cur_text_section, sym, ind, R_RISCV_JAL, 0);
+    gen_le32( 0x6f | ENCODE_RD(op1->reg));
+}
+
+static void asm_binary_opcode(TCCState* s1, int token)
+{
+    Operand ops[2];
+
+    /* Parsing */
+    parse_operand(s1, &ops[0]);
+    if (tok == ',')
+        next();
+    else
+        expect("','");
+    parse_operand(s1, &ops[1]);
+
+    switch (token) {
+    case TOK_ASM_la:
+        /* TODO: implement la*/
+        tcc_error("la is not implemented yet");
+    case TOK_ASM_lla:
+        if(!ops[1].e.sym){
+            tcc_error("(%s): expected symbol as second argument", token);
+        }
+        gen_lla(token, &ops[0], &ops[1]);
+        return;
+    case TOK_ASM_mv:
+        asm_emit_i(token, (4 << 2) | 3, &ops[0], &ops[1], &zero_imm);
+        return;
+    case TOK_ASM_neg:
+        asm_emit_r(token, (0xC << 2) | 3 | (32 << 25), &ops[0], &zero, &ops[1]);
+        return;
+    case TOK_ASM_negw:
+        asm_emit_r(token, (0xE << 2) | 3 | (0 << 12) | (32 << 25), &ops[0], &zero, &ops[1]);
+        return;
+    case TOK_ASM_li:
+        /* NOTE: only works with small values! */
+        asm_emit_i(token, (4 << 2) | 3, &ops[0], &zero, &ops[1]);
+        return;
+    case TOK_ASM_lui:
+        asm_emit_u(token, (0xD << 2) | 3, &ops[0], &ops[1]);
+        return;
+    case TOK_ASM_auipc:
+        asm_emit_u(token, (0x05 << 2) | 3, &ops[0], &ops[1]);
+        return;
+    default:
+        expect("binary instruction");
+    }
 }
 
 static void asm_shift_opcode(TCCState *s1, int token)
@@ -336,6 +406,52 @@ static void asm_shift_opcode(TCCState *s1, int token)
     }
 }
 
+static void asm_jump_opcode(TCCState* s1, int token)
+{
+    Operand ops[3];
+    int offset;
+    parse_operand(s1, &ops[0]);
+    if (tok == ',')
+        next();
+    else
+        expect("','");
+    parse_operand(s1, &ops[1]);
+    if (token != TOK_ASM_jal){
+        if (tok == ',')
+            next();
+        else
+            expect("','");
+        parse_operand(s1, &ops[2]);
+    }
+
+    switch (token) {
+    case TOK_ASM_jalr:
+         asm_emit_i(token, 0x67, &ops[0], &ops[1], &ops[2]);
+         return;
+    case TOK_ASM_jal:
+         if(ops[1].e.sym){
+             // This handles `jal rd, symbol`
+             gen_jal(token, &ops[0], &ops[1]);
+             return;
+         } else if(ops[1].type != OP_IM20S && ops[1].type != OP_IM12S) {
+             tcc_error("jal jump too large");
+         } else {
+             // This is for immediates like `jal rd, -1201`
+             // TODO: Make sure it works with positive and negative relative
+             // jumps
+             /* Weird encoding. It doesn't let us use `asm_emit_u` easily */
+             offset = 0;
+             offset  = ((ops[1].e.v & 0x100000)>>20) <<19 |
+                       ((ops[1].e.v & 0x0FF000)>>12)      |
+                       ((ops[1].e.v & 0x000800)>>11) <<8  |
+                       ((ops[1].e.v & 0x0007FE)>> 1) <<9;
+             gen_le32( 0x6f | ENCODE_RD(ops[0].reg) | offset<<12);
+             return;
+         }
+    default:
+         expect("jump operation");
+    }
+}
 static void asm_data_processing_opcode(TCCState* s1, int token)
 {
     Operand ops[3];
@@ -577,8 +693,6 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     switch (token) {
     case TOK_ASM_fence:
     case TOK_ASM_fence_i:
-    case TOK_ASM_scall:
-    case TOK_ASM_sbreak:
     case TOK_ASM_ecall:
     case TOK_ASM_ebreak:
     case TOK_ASM_mrts:
@@ -597,6 +711,12 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
         asm_unary_opcode(s1, token);
         return;
 
+    case TOK_ASM_li:    /* pseudoinstruction */
+    case TOK_ASM_mv:    /* pseudoinstruction */
+    case TOK_ASM_la:    /* pseudoinstruction */
+    case TOK_ASM_neg:   /* pseudoinstruction */
+    case TOK_ASM_negw:  /* pseudoinstruction */
+    case TOK_ASM_lla:   /* pseudoinstruction */
     case TOK_ASM_lui:
     case TOK_ASM_auipc:
         asm_binary_opcode(s1, token);
@@ -621,6 +741,11 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     case TOK_ASM_sraiw:
     case TOK_ASM_sraid:
         asm_shift_opcode(s1, token);
+        return;
+
+    case TOK_ASM_jalr:
+    case TOK_ASM_jal:
+        asm_jump_opcode(s1, token);
         return;
 
     case TOK_ASM_add:
