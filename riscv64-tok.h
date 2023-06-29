@@ -80,6 +80,18 @@
 #define DEF_ASM_WITH_SUFFIX(x, y) \
   DEF(TOK_ASM_ ## x ## _ ## y, #x #y)
 
+/*  Pseudo*/
+ DEF_ASM(li)
+ DEF_ASM(la)
+ DEF_ASM(lla)
+ DEF_ASM(mv)
+ DEF_ASM(neg)
+ DEF_ASM(negw)
+
+/*  Jumps */
+ DEF_ASM(jalr)
+ DEF_ASM(jal)
+
 /*   Loads */
 
  DEF_ASM(lb)
@@ -91,6 +103,7 @@
  DEF_ASM(lq)
  DEF_ASM(lwu)
  DEF_ASM(ldu)
+
 
 /* Stores */
 
