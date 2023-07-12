@@ -1032,15 +1032,15 @@ static void gadd_sp(int val)
     }
 }
 
-typedef enum X86_64_Mode {
+enum {
   x86_64_mode_none,
   x86_64_mode_memory,
   x86_64_mode_integer,
   x86_64_mode_sse,
   x86_64_mode_x87
-} X86_64_Mode;
+};
 
-static X86_64_Mode classify_x86_64_merge(X86_64_Mode a, X86_64_Mode b)
+static int classify_x86_64_merge(int a, int b)
 {
     if (a == b)
         return a;
@@ -1058,9 +1058,9 @@ static X86_64_Mode classify_x86_64_merge(X86_64_Mode a, X86_64_Mode b)
         return x86_64_mode_sse;
 }
 
-static X86_64_Mode classify_x86_64_inner(CType *ty)
+static int classify_x86_64_inner(CType *ty)
 {
-    X86_64_Mode mode;
+    int mode;
     Sym *f;
     
     switch (ty->t & VT_BTYPE) {
@@ -1093,9 +1093,9 @@ static X86_64_Mode classify_x86_64_inner(CType *ty)
     return 0;
 }
 
-static X86_64_Mode classify_x86_64_arg(CType *ty, CType *ret, int *psize, int *palign, int *reg_count)
+static int classify_x86_64_arg(CType *ty, CType *ret, int *psize, int *palign, int *reg_count)
 {
-    X86_64_Mode mode;
+    int mode;
     int size, align, ret_t = 0;
     
     if (ty->t & (VT_BITFIELD|VT_ARRAY)) {
@@ -1158,7 +1158,7 @@ ST_FUNC int classify_x86_64_va_arg(CType *ty)
         __va_gen_reg, __va_float_reg, __va_stack
     };
     int size, align, reg_count;
-    X86_64_Mode mode = classify_x86_64_arg(ty, NULL, &size, &align, &reg_count);
+    int mode = classify_x86_64_arg(ty, NULL, &size, &align, &reg_count);
     switch (mode) {
     default: return __va_stack;
     case x86_64_mode_integer: return __va_gen_reg;
@@ -1194,7 +1194,7 @@ static int arg_prepare_reg(int idx) {
    parameters and the function address. */
 void gfunc_call(int nb_args)
 {
-    X86_64_Mode mode;
+    int mode;
     CType type;
     int size, align, r, args_size, stack_adjust, run_start, run_end, i, reg_count;
     int nb_reg_args = 0;
@@ -1483,7 +1483,7 @@ static void push_arg_reg(int i) {
 /* generate function prolog of type 't' */
 void gfunc_prolog(CType *func_type)
 {
-    X86_64_Mode mode;
+    int mode;
     int i, addr, align, size, reg_count;
     int param_addr = 0, reg_param_index, sse_param_index;
     Sym *sym;
