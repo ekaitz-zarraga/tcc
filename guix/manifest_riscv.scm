@@ -1,11 +1,11 @@
-(load "guix.scm")
+(load "package_riscv.scm")
 (use-modules (gnu packages gdb))
-(define triplet "i686-linux-gnu")
+(define triplet "riscv64-linux-gnu")
 
 (packages->manifest
   (let* ((binutils (cross-binutils triplet))
          (libc     (cross-libc     triplet)))
-    (list tcc-mine-i386
+    (list tcc-mine-riscv
           (list gcc "lib")
           binutils
           libc
