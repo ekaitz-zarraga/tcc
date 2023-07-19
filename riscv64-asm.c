@@ -126,8 +126,8 @@ typedef struct Operand {
 } Operand;
 
 /* Fixed operands for pseudoinstructions */
-const Operand zero_imm = { OP_IM12S, 0};
-const Operand zero = { OP_REG, 0};
+const Operand zero_imm = {OP_IM12S, {0}};
+const Operand zero = {OP_REG, {0}};
 
 /* Parse a text containing operand and store the result in OP */
 static void parse_operand(TCCState *s1, Operand *op)
@@ -372,6 +372,7 @@ static void asm_shift_opcode(TCCState *s1, int token)
 static void asm_jump_opcode(TCCState* s1, int token)
 {
     Operand ops[3];
+    int offset;
     parse_operand(s1, &ops[0]);
     if (tok == ',')
         next();
@@ -403,7 +404,7 @@ static void asm_jump_opcode(TCCState* s1, int token)
          if(ops[1].type != OP_IM20S && ops[1].type != OP_IM12S)
              tcc_error("jal jump too large");
          /* Weird encoding. It doesn't let us use `asm_emit_u` easily */
-         int offset = 0;
+         offset = 0;
          offset  = ((ops[1].e.v & 0x100000)>>20) <<19 |
                    ((ops[1].e.v & 0x0FF000)>>12)      |
                    ((ops[1].e.v & 0x000800)>>11) <<8  |

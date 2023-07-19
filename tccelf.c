@@ -589,7 +589,7 @@ ST_FUNC void put_elf_reloc(Section *symtab, Section *s, unsigned long offset,
 ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
 {
     Section *sr = s->reloc;
-    ElfW_Rel *r, *dest;
+    ElfW_Rel *r, *dest, tmp;
     ssize_t a;
     ElfW(Addr) addr;
 
@@ -608,7 +608,7 @@ ST_FUNC void squeeze_multi_relocs(Section *s, size_t oldrelocoffset)
 	for (; i >= (ssize_t)oldrelocoffset &&
                ei->r_offset > addr; i -= sizeof(*r)) {
             ei = (ElfW_Rel*)(sr->data + i);
-	    ElfW_Rel tmp = *(ElfW_Rel*)(sr->data + a);
+	    tmp = *(ElfW_Rel*)(sr->data + a);
 	    *(ElfW_Rel*)(sr->data + a) = *(ElfW_Rel*)(sr->data + i);
 	    *(ElfW_Rel*)(sr->data + i) = tmp;
 	}

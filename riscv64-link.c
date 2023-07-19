@@ -164,7 +164,9 @@ ST_FUNC void relocate_plt(TCCState *s1)
     if (s1->plt->reloc) {
         ElfW_Rel *rel;
         p = s1->got->data;
-        for_each_elem(s1->plt->reloc, 0, rel, ElfW_Rel) {
+        for (rel = (ElfW_Rel *) s1->plt->reloc->data; \
+             rel < (ElfW_Rel *) (s1->plt->reloc->data + s1->plt->reloc->data_offset); \
+             rel++) {
             write64le(p + rel->r_offset, s1->plt->sh_addr);
 	}
     }

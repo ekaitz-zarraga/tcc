@@ -702,8 +702,10 @@ static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
 static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
 {
     // TODO make sure api matches
-    if (level == 0) {
-        *paddr = uc->uc_mcontext.pc;
+    if (level < 0) {
+      return -1;
+    } else if (level == 0) {
+        *paddr = uc->uc_mcontext.__gregs[REG_PC];
     } else {
         addr_t *fp = (addr_t*)uc->uc_mcontext.__gregs[REG_S0]; // REG_S0 == 8
         while (--level && fp >= (addr_t*)0x1000)
