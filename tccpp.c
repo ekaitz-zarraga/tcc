@@ -2180,6 +2180,10 @@ static void parse_number(const char *p)
     unsigned int bn[BN_SIZE];
     double d;
 
+    /* initialize values */
+    d = 0;
+    bn_zero(bn);
+
     /* number */
     q = token_buf;
     ch = *p++;
