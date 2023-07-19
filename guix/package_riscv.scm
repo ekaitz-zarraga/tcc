@@ -16,7 +16,7 @@
              (gnu packages bootstrap)
              (gnu packages texinfo))
 
-(define %source-dir (dirname (current-filename)))
+(define %source-dir (dirname (dirname (current-filename))))
 
 (define %git-commit
   (read-line
