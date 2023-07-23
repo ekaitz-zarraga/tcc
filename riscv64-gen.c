@@ -534,7 +534,7 @@ ST_FUNC void store(int r, SValue *sv)
             fc = fc << 20 >> 20;
         }
     } else
-      tcc_error("implement me: %s(!local)", __FUNCTION__);
+      tcc_error("implement me: %s(!local)", "store");
     ES(is_freg(r) ? 0x27 : 0x23,                          // fs... | s...
        size == 1 ? 0 : size == 2 ? 1 : size == 4 ? 2 : 3, // ... [wd] | [bhwd]
        ptrreg, rr, fc);                                   // RR, fc(base)
@@ -1194,7 +1194,7 @@ static void gen_opil(int op, int ll)
             vtop->cmp_r = a | b << 8;
             break;
         }
-        tcc_error("implement me: %s(%s)", __FUNCTION__, get_tok_str(op, NULL));
+        tcc_error("implement me: %s(%s)", "gen_opil", get_tok_str(op, NULL));
         break;
 
     case '+':
