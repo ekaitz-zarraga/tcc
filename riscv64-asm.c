@@ -108,13 +108,11 @@ enum {
     OPT_IM12S,
     OPT_IM32,
     OPT_IM20S,
-    OPT_LABEL,
 };
 #define OP_REG    (1 << OPT_REG)
 #define OP_IM32   (1 << OPT_IM32)
 #define OP_IM12S   (1 << OPT_IM12S)
 #define OP_IM20S   (1 << OPT_IM20S)
-#define OP_LABEL   (1 << OPT_LABEL)
 
 typedef struct Operand {
     uint32_t type;
@@ -128,6 +126,7 @@ typedef struct Operand {
 /* Fixed operands for pseudoinstructions */
 const Operand zero_imm = {OP_IM12S, {0}};
 const Operand zero = {OP_REG, {0}};
+
 
 /* Parse a text containing operand and store the result in OP */
 static void parse_operand(TCCState *s1, Operand *op)
@@ -146,6 +145,7 @@ static void parse_operand(TCCState *s1, Operand *op)
         /* constant value */
         next(); // skip '#' or '$'
     }
+
     asm_expr(s1, &e);
     op->e = e;
     if (!op->e.sym) {
@@ -155,9 +155,9 @@ static void parse_operand(TCCState *s1, Operand *op)
             op->type = OP_IM20S;
         else
             op->type = OP_IM32;
+        return;
     } else {
-        // TODO: Check if we need to do anything
-        op->type = OP_LABEL;
+        expect("operand");
     }
 }
 
@@ -272,6 +272,39 @@ static void asm_emit_u(int token, uint32_t opcode, const Operand* rd, const Oper
     gen_le32(opcode | ENCODE_RD(rd->reg) | (rs2->e.v << 12));
 }
 
+static void gen_lla(int token, Operand* op1, Operand* op2) {
+    // 1. Generate the symbol first
+    // 2. Generate a R_RISCV_PCREL_HI20 relocation pointing to the auipc for
+    //    the symbol
+    // 3. Generate an auipc with 0x0
+    // 4. Generate a R_RISCV_PCREL_LO12_I relocation pointing to the addi for
+    //    the symbol
+    // 5. Generate an addi with 0x0
+    // OPTIONAL. Add R_RISCV_RELAX
+    //
+
+    Sym *sym, label = {0};
+    sym = op2->e.sym;
+    label.type.t = VT_VOID | VT_STATIC;
+    put_extern_sym(&label, cur_text_section, ind, 0);
+    greloca(cur_text_section, sym, ind, R_RISCV_PCREL_HI20, 0);
+    asm_emit_u(token, (0x05 << 2) | 3, op1, &zero_imm); // auipc rd, 0x0
+    greloca(cur_text_section, &label, ind, R_RISCV_PCREL_LO12_I, 0);
+    asm_emit_i(token, (4 << 2) | 3, op1, op1, &zero_imm); // addi rd, rd, 0x0
+
+    // NOTE: We need to use an empty label (see `label` above) for this to
+    // work, if we don't it fails saying the second relocation's value is not
+    // the same as the addr of the previous one, and it's true.
+    //
+    // It returns this if we use sym in both relocations:
+    // > PCREL_HI20: val=10230 addr=10260
+    // > PCREL_LO12_I: val=10230 addr=10264
+    // > tcc: error: unsupported hi/lo pcrel reloc scheme
+    //
+    // If we do it as in the code above it works properly.
+    // I don't know why it should be like this, but it happens to work
+}
+
 static void asm_binary_opcode(TCCState* s1, int token)
 {
     Operand ops[2];
@@ -288,6 +321,12 @@ static void asm_binary_opcode(TCCState* s1, int token)
     case TOK_ASM_la:
         /* TODO: implement la*/
         tcc_error("la is not implemented yet");
+    case TOK_ASM_lla:
+        if(!ops[1].e.sym){
+            tcc_error("(%s): expected symbol as second argument", token);
+        }
+        gen_lla(token, &ops[0], &ops[1]);
+        return;
     case TOK_ASM_mv:
         asm_emit_i(token, (4 << 2) | 3, &ops[0], &ops[1], &zero_imm);
         return;
@@ -392,25 +431,24 @@ static void asm_jump_opcode(TCCState* s1, int token)
          asm_emit_i(token, 0b1100111, &ops[0], &ops[1], &ops[2]);
          return;
     case TOK_ASM_jal:
-         // TODO:
-         // should work with a label, too
-         // we have to figure out how to read labels
-         if(ops[1].type == OP_LABEL){
-            // TODO: GOT A LABEL
-             tcc_error("found a label %d", ops[1].e.sym->v);
+         if(ops[1].e.sym){
+             // TODO: implement jal reg, symbol
+             tcc_error("(%s): to label not supported", get_tok_str(token, NULL));
          }
-
          // This is for offsets
+         // TODO: Make sure it works with positive and negative offsets
          if(ops[1].type != OP_IM20S && ops[1].type != OP_IM12S)
              tcc_error("jal jump too large");
-         /* Weird encoding. It doesn't let us use `asm_emit_u` easily */
-         offset = 0;
-         offset  = ((ops[1].e.v & 0x100000)>>20) <<19 |
-                   ((ops[1].e.v & 0x0FF000)>>12)      |
-                   ((ops[1].e.v & 0x000800)>>11) <<8  |
-                   ((ops[1].e.v & 0x0007FE)>> 1) <<9;
-         gen_le32( 0b1101111 | ENCODE_RD(ops[0].reg) | offset<<12);
-         return;
+         else{
+             /* Weird encoding. It doesn't let us use `asm_emit_u` easily */
+             offset = 0;
+             offset  = ((ops[1].e.v & 0x100000)>>20) <<19 |
+                       ((ops[1].e.v & 0x0FF000)>>12)      |
+                       ((ops[1].e.v & 0x000800)>>11) <<8  |
+                       ((ops[1].e.v & 0x0007FE)>> 1) <<9;
+             gen_le32( 0b1101111 | ENCODE_RD(ops[0].reg) | offset<<12);
+             return;
+         }
     default:
          expect("jump operation");
     }
@@ -681,6 +719,7 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     case TOK_ASM_la:    /* pseudoinstruction */
     case TOK_ASM_neg:   /* pseudoinstruction */
     case TOK_ASM_negw:  /* pseudoinstruction */
+    case TOK_ASM_lla:   /* pseudoinstruction */
     case TOK_ASM_lui:
     case TOK_ASM_auipc:
         asm_binary_opcode(s1, token);

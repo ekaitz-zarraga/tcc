@@ -83,6 +83,7 @@
 /*  Pseudo*/
  DEF_ASM(li)
  DEF_ASM(la)
+ DEF_ASM(lla)
  DEF_ASM(mv)
  DEF_ASM(neg)
  DEF_ASM(negw)
