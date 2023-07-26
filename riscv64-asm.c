@@ -157,7 +157,8 @@ static void parse_operand(TCCState *s1, Operand *op)
             op->type = OP_IM32;
         return;
     } else {
-        expect("operand");
+        /*TODO: Deal with offsets and stuff like that for the moment it's ok to
+         leave it like this as we are only taking the symbol case*/
     }
 }
 
@@ -304,6 +305,12 @@ static void gen_lla(int token, Operand* op1, Operand* op2) {
     // If we do it as in the code above it works properly.
     // I don't know why it should be like this, but it happens to work
 }
+static void gen_jal(int token, Operand* op1, Operand* op2) {
+    Sym *sym;
+    sym = op2->e.sym;
+    greloca(cur_text_section, sym, ind, R_RISCV_JAL, 0);
+    gen_le32( 0b1101111 | ENCODE_RD(op1->reg));
+}
 
 static void asm_binary_opcode(TCCState* s1, int token)
 {
@@ -432,14 +439,15 @@ static void asm_jump_opcode(TCCState* s1, int token)
          return;
     case TOK_ASM_jal:
          if(ops[1].e.sym){
-             // TODO: implement jal reg, symbol
-             tcc_error("(%s): to label not supported", get_tok_str(token, NULL));
-         }
-         // This is for offsets
-         // TODO: Make sure it works with positive and negative offsets
-         if(ops[1].type != OP_IM20S && ops[1].type != OP_IM12S)
+             // This handles `jal rd, symbol`
+             gen_jal(token, &ops[0], &ops[1]);
+             return;
+         } else if(ops[1].type != OP_IM20S && ops[1].type != OP_IM12S) {
              tcc_error("jal jump too large");
-         else{
+         } else {
+             // This is for immediates like `jal rd, -1201`
+             // TODO: Make sure it works with positive and negative relative
+             // jumps
              /* Weird encoding. It doesn't let us use `asm_emit_u` easily */
              offset = 0;
              offset  = ((ops[1].e.v & 0x100000)>>20) <<19 |
