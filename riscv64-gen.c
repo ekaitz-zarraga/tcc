@@ -760,10 +760,14 @@ ST_FUNC void gfunc_call(int nb_args)
     if ((vtop->r & VT_VALMASK) == VT_CMP)
       gv(RC_INT);
 
+
     if (stack_add) {
-        if (stack_add >= 0x1000) {
-            o(0x37 | (5 << 7) | (-stack_add & 0xfffff000)); //lui t0, upper(v)
-            EI(0x13, 0, 5, 5, -stack_add << 20 >> 20); // addi t0, t0, lo(v)
+        if (stack_add >= 0x800) {
+            unsigned int bit11 = (((unsigned int)-stack_add) >> 11) & 1;
+            o(0x37 | (5 << 7) |
+              ((-stack_add + (bit11 << 12)) & 0xfffff000)); //lui t0, upper(v)
+            EI(0x13, 0, 5, 5, ((-stack_add & 0xfff) - bit11 * (1 << 12)));
+                                                         // addi t0, t0, lo(v)
             ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
         }
         else
@@ -890,9 +894,12 @@ done:
     gcall_or_jmp(1);
     vtop -= nb_args + 1;
     if (stack_add) {
-        if (stack_add >= 0x1000) {
-            o(0x37 | (5 << 7) | (stack_add & 0xfffff000)); //lui t0, upper(v)
-            EI(0x13, 0, 5, 5, stack_add << 20 >> 20); // addi t0, t0, lo(v)
+        if (stack_add >= 0x800) {
+            unsigned int bit11 = ((unsigned int)stack_add >> 11) & 1;
+            o(0x37 | (5 << 7) |
+              ((stack_add + (bit11 << 12)) & 0xfffff000)); //lui t0, upper(v)
+            EI(0x13, 0, 5, 5, (stack_add & 0xfff) - bit11 * (1 << 12));
+                                                           // addi t0, t0, lo(v)
             ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
         }
         else
@@ -1497,12 +1504,24 @@ ST_FUNC void ggoto(void)
 
 ST_FUNC void gen_vla_sp_save(int addr)
 {
-    ES(0x23, 3, 8, 2, addr); // sd sp, fc(s0)
+    if (((unsigned)addr + (1 << 11)) >> 12) {
+        o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
+        ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
+        ES(0x23, 3, 5, 2, (int)addr << 20 >> 20); // sd sp, fc(t0)
+    }
+    else
+        ES(0x23, 3, 8, 2, addr); // sd sp, fc(s0)
 }
 
 ST_FUNC void gen_vla_sp_restore(int addr)
 {
-    EI(0x03, 3, 2, 8, addr); // ld sp, fc(s0)
+    if (((unsigned)addr + (1 << 11)) >> 12) {
+        o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
+        ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
+        EI(0x03, 3, 2, 5, (int)addr << 20 >> 20); // ld sp, fc(t0)
+    }
+    else
+        EI(0x03, 3, 2, 8, addr); // ld sp, fc(s0)
 }
 
 ST_FUNC void gen_vla_alloc(CType *type, int align)
