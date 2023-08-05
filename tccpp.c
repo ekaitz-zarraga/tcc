@@ -3509,7 +3509,7 @@ ST_FUNC void preprocess_start(TCCState *s1)
     s1->pack_stack[0] = 0;
     s1->pack_stack_ptr = s1->pack_stack;
 
-    set_idnum('$', s1->dollars_in_identifiers ? IS_ID : 0);
+    set_idnum('$', IS_ID); // Activate dollars-in-identifiers always
     set_idnum('.', (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0);
 
     buf = tcc_malloc(3 + strlen(file->filename));
