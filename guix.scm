@@ -40,7 +40,8 @@
     (build-system gnu-build-system)
     (native-inputs (list perl texinfo which))
     (arguments
-      `(#:configure-flags (list (string-append "--elfinterp="
+      `(#:configure-flags (list "--debug"
+                                (string-append "--elfinterp="
                                                (assoc-ref %build-inputs "libc")
                                                ,(glibc-dynamic-linker))
                                 (string-append "--crtprefix="
@@ -61,6 +62,8 @@
                                     `("--triplet=arm-linux-gnueabihf")
                                     '()))
         #:test-target "test"))
+
+    (outputs (list "out" "debug"))
     (native-search-paths
       (list (search-path-specification
               (variable "CPATH")
@@ -94,7 +97,8 @@
     (arguments
       (list
         #:configure-flags
-        #~(list "--enable-cross"
+        #~(list "--debug"
+                "--enable-cross"
                 "--disable-rpath"
                 "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1")
         #:tests? #f
@@ -131,6 +135,7 @@
                                             (string-append (assoc-ref outputs "out") "/bin"))
                               (copy-recursively "include"
                                             (string-append (assoc-ref outputs "out") "/include")))))))
+    (outputs (list "out" "debug"))
     (native-search-paths
      (list (search-path-specification
             (variable "CPATH")
@@ -138,7 +143,6 @@
            (search-path-specification
             (variable "LIBRARY_PATH")
             (files '("lib" "lib64")))))
-
     (synopsis "Tiny and fast C compiler")
     (description
      "TCC, also referred to as \"TinyCC\", is a small and fast C compiler
