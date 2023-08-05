@@ -928,8 +928,11 @@ ST_FUNC void gfunc_prolog(CType *func_type)
     addr = 0;
     /* if the function returns by reference, then add an
        implicit pointer parameter */
+    func_vt = sym->type;
+    func_var = (sym->c == FUNC_ELLIPSIS);
     size = type_size(&func_vt, &align);
-    if (size > 2 * XLEN) {
+    if (((func_vt.t & VT_BTYPE) == VT_STRUCT)
+        && (size > 2 * XLEN)) {
         loc -= 8;
         func_vc = loc;
         ES(0x23, 3, 8, 10 + areg[0]++, loc); // sd a0, loc(s0)
