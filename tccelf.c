@@ -386,6 +386,9 @@ ST_FUNC int put_elf_sym(Section *s, addr_t value, unsigned long size,
    found. */
 ST_FUNC int find_elf_sym(Section *s, const char *name)
 {
+    puts("find_elf_sym\n");
+    puts("name = ");
+    puts(name);
     ElfW(Sym) *sym;
     Section *hs;
     int nbuckets, sym_index, h;
@@ -404,6 +407,19 @@ ST_FUNC int find_elf_sym(Section *s, const char *name)
     sym_index = ((int *)hs->data)[2 + h];
     while (sym_index != 0) {
         sym = &((ElfW(Sym) *)s->data)[sym_index];
+        printf("s=%X\n", s);
+        fflush(stdout);
+        printf("s->link=%X\n", s->link);
+        fflush(stdout);
+        puts("s->link->data=");
+        puts(s->link->data);
+        printf("sym=%X\n", sym);
+        fflush(stdout);
+        puts("sym->st_name=");
+        printf("%d", sym->st_name);
+        puts("\n");
+        fflush(stdout);
+        puts("\n");
         name1 = (char *) s->link->data + sym->st_name;
         if (!strcmp(name, name1))
             return sym_index;
