@@ -299,6 +299,7 @@ static int load_symofs(int r, SValue *sv, int forstore)
     int fc = sv->c.i, v = sv->r & VT_VALMASK;
     if (sv->r & VT_SYM) {
         Sym label = {0};
+        label.c = 0; // mescc fails to properly initialize the line above
         assert(v == VT_CONST);
         if (sv->sym->type.t & VT_STATIC) { // XXX do this per linker relax
             greloca(cur_text_section, sv->sym, ind,
