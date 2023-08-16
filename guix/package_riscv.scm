@@ -73,21 +73,17 @@
                             (display
                               (string-append "INC-riscv64 = " #$libccross "/include" ":" #$output "/include") port)))))
 
-                   ;(add-before 'install 'fail (lambda _ (error "Fail for debug")))
+                   ;; Use lib/lib-arm64.c. Needed for long-double support.
+                   ;; - Later it'll try to link it (needed)
+                   (add-before 'install 'build-libtcc1
+                     (lambda* (#:key inputs outputs #:allow-other-keys)
+                       (invoke "./riscv64-tcc" "-c" "lib/lib-arm64.c" "-o" "libtcc1.o")
+                       (invoke "./riscv64-tcc" "-ar" "cr" "libtcc1-riscv64.a" "libtcc1.o")))
 
                    ;; Default `make install` phase does not install the cross compilers
                    ;; We have to do it by hand
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
-                              ;; Make an empty libtcc1. Needed because:
-                              ;; - Later it'll try to dynamically link it (needed)
-                              ;; - It only has i386 related definitions, and fails if it's compiled in other arch (make it empty)
-                              (call-with-output-file "lib/libtcc1.c"
-                                (lambda (p) (display "" p)))
-                              (invoke "./riscv64-tcc" "-c" "lib/libtcc1.c" "-o" "libtcc1.o")
-                              (invoke "./riscv64-tcc" "-ar" "cr" "libtcc1-riscv64.a" "libtcc1.o")
-
-                              ;; Now install
                               (install-file "libtcc1-riscv64.a"
                                             (string-append (assoc-ref outputs "out") "/lib/tcc"))
                               (install-file "riscv64-tcc"
