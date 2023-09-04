@@ -343,11 +343,11 @@ static void load_large_constant(int rr, int fc, uint32_t pi)
     if (fc < 0)
         pi++;
     o(0x37 | (rr << 7) | (((pi + 0x800) & 0xfffff000))); // lui RR, up(up(fc))
-    EI(0x13, 0, rr, rr, (int)pi << 20 >> 20);   // addi RR, RR, lo(up(fc))
+    EI(0x13, 0, rr, rr, (int32_t)((int32_t)pi << 20) >> 20);   // addi RR, RR, lo(up(fc))
     EI(0x13, 1, rr, rr, 12); // slli RR, RR, 12
-    EI(0x13, 0, rr, rr, (fc + (1 << 19)) >> 20);  // addi RR, RR, up(lo(fc))
+    EI(0x13, 0, rr, rr, (int32_t)(fc + (1 << 19)) >> 20);  // addi RR, RR, up(lo(fc))
     EI(0x13, 1, rr, rr, 12); // slli RR, RR, 12
-    fc = fc << 12 >> 12;
+    fc = (int32_t)((int32_t)fc << 12) >> 12;
     EI(0x13, 0, rr, rr, fc >> 8);  // addi RR, RR, lo1(lo(fc))
     EI(0x13, 1, rr, rr, 8); // slli RR, RR, 8
 }
@@ -390,8 +390,8 @@ ST_FUNC void load(int r, SValue *sv)
                 load_large_constant(rr, fc, si);
                 fc &= 0xff;
             } else {
-                o(0x37 | (rr << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
-                fc = fc << 20 >> 20;
+                o(0x37 | (int32_t)(rr << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
+                fc = (int32_t)(fc << 20) >> 20;
             }
             br = rr;
         } else {
@@ -425,7 +425,7 @@ ST_FUNC void load(int r, SValue *sv)
         if (((unsigned)fc + (1 << 11)) >> 12)
             o(0x37 | (rr << 7) | ((0x800 + fc) & 0xfffff000)), rb = rr; //lui RR, upper(fc)
         if (fc || (rr != rb) || do32bit || (fr & VT_SYM))
-          EI(0x13 | do32bit, 0, rr, rb, fc << 20 >> 20); // addi[w] R, x0|R, FC
+          EI(0x13 | do32bit, 0, rr, rb, (int32_t)(fc << 20) >> 20); // addi[w] R, x0|R, FC
         if (zext) {
             EI(0x13, 1, rr, rr, 32); // slli RR, RR, 32
             EI(0x13, 5, rr, rr, 32); // srli RR, RR, 32
@@ -532,7 +532,7 @@ ST_FUNC void store(int r, SValue *sv)
             fc &= 0xff;
         } else {
             o(0x37 | (ptrreg << 7) | ((0x800 + fc) & 0xfffff000)); //lui RR, upper(fc)
-            fc = fc << 20 >> 20;
+            fc = (int32_t)(fc << 20) >> 20;
         }
     } else
       tcc_error("implement me: %s(!local)", "store");
@@ -1045,7 +1045,7 @@ ST_FUNC void gfunc_epilog(void)
     if (v >= (1 << 11)) {
         d = 16;
         o(0x37 | (5 << 7) | ((0x800 + (v-16)) & 0xfffff000)); //lui t0, upper(v)
-        EI(0x13, 0, 5, 5, (v-16) << 20 >> 20); // addi t0, t0, lo(v)
+        EI(0x13, 0, 5, 5, (int32_t)((v-16) << 20) >> 20); // addi t0, t0, lo(v)
         ER(0x33, 0, 2, 2, 5, 0); // add sp, sp, t0
     }
     EI(0x03, 3, 1, 2, d - 8 - num_va_regs * 8);  // ld ra, v-8(sp)
@@ -1056,7 +1056,7 @@ ST_FUNC void gfunc_epilog(void)
     if (v >= (1 << 11)) {
         EI(0x13, 0, 8, 2, d - num_va_regs * 8);      // addi s0, sp, d
         o(0x37 | (5 << 7) | ((0x800 + (v-16)) & 0xfffff000)); //lui t0, upper(v)
-        EI(0x13, 0, 5, 5, (v-16) << 20 >> 20); // addi t0, t0, lo(v)
+        EI(0x13, 0, 5, 5, (int32_t)((v-16) << 20) >> 20); // addi t0, t0, lo(v)
         ER(0x33, 0, 2, 2, 5, 0x20); // sub sp, sp, t0
         gjmp_addr(func_sub_sp_offset + 5*4);
     }
@@ -1124,7 +1124,7 @@ static void gen_opil(int op, int ll)
     ll = ll ? 0 : 8;
     if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
         int fc = vtop->c.i;
-        if (fc == vtop->c.i && !(((unsigned)fc + (1 << 11)) >> 12)) {
+        if (fc == vtop->c.i && !((uint32_t)((unsigned)fc + (1 << 11)) >> 12)) {
             int cll = 0;
             int m = ll ? 31 : 63;
             vswap();
@@ -1511,7 +1511,7 @@ ST_FUNC void gen_vla_sp_save(int addr)
     if (((unsigned)addr + (1 << 11)) >> 12) {
         o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
         ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
-        ES(0x23, 3, 5, 2, (int)addr << 20 >> 20); // sd sp, fc(t0)
+        ES(0x23, 3, 5, 2, (int32_t)((int32_t)addr << 20) >> 20); // sd sp, fc(t0)
     }
     else
         ES(0x23, 3, 8, 2, addr); // sd sp, fc(s0)
@@ -1519,10 +1519,10 @@ ST_FUNC void gen_vla_sp_save(int addr)
 
 ST_FUNC void gen_vla_sp_restore(int addr)
 {
-    if (((unsigned)addr + (1 << 11)) >> 12) {
+    if ((uint32_t)((uint32_t)addr + (1 << 11)) >> 12) {
         o(0x37 | (5 << 7) | ((0x800 + addr) & 0xfffff000)); //lui t0,upper(addr)
         ER(0x33, 0, 5, 5, 8, 0); // add t0, t0, s0
-        EI(0x03, 3, 2, 5, (int)addr << 20 >> 20); // ld sp, fc(t0)
+        EI(0x03, 3, 2, 5, (int32_t)((int32_t)addr << 20) >> 20); // ld sp, fc(t0)
     }
     else
         EI(0x03, 3, 2, 8, addr); // ld sp, fc(s0)
