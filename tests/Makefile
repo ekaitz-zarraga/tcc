@@ -32,11 +32,8 @@ endif
 ifeq ($(CONFIG_dll),no)
  TESTS := $(filter-out dlltest, $(TESTS))
 endif
-ifeq (,$(filter arm64 i386 x86_64,$(ARCH)))
- TESTS := $(filter-out vla_test-run,$(TESTS))
-endif
-ifeq ($(CONFIG_arm_eabi),yes)
- TESTS := $(filter-out test3,$(TESTS))
+ifeq (-$(CONFIG_arm_eabi)-$(CONFIG_arm_vfp)-,-yes--)
+ TESTS := $(filter-out test3 test1b,$(TESTS))
 endif
 ifeq (,$(filter i386 x86_64,$(ARCH)))
  TESTS := $(filter-out asm-c-connect-test,$(TESTS))
@@ -161,7 +158,7 @@ dlltest:
 	$(TCC) $(NATIVE_DEFINES) -DLIBTCC_AS_DLL $(TOPSRC)/libtcc.c $(LIBS) -shared -o libtcc2$(DLLSUF)
 	$(TCC) $(NATIVE_DEFINES) -DONE_SOURCE=0 $(TOPSRC)/tcc.c libtcc2$(DLLSUF) $(LIBS) -Wl,-rpath=. -o tcc2$(EXESUF)
 	./tcc2$(EXESUF) $(TCCFLAGS) $(RUN_TCC) -run $(TOPSRC)/examples/ex1.c
-ifndef CONFIG_WIN32
+ifeq (,$(filter Darwin WIN32,$(TARGETOS)))
 	@echo ------------ $@ with PIC ------------
 	$(CC) $(CFLAGS) -fPIC $(NATIVE_DEFINES) -DLIBTCC_AS_DLL -c $(TOPSRC)/libtcc.c
 	$(TCC) libtcc.o $(LIBS) -shared -o libtcc2$(DLLSUF)
@@ -220,7 +217,7 @@ ex%: $(TOPSRC)/examples/ex%.c
 
 # tiny assembler testing
 asmtest.ref: asmtest.S
-	$(CC) -Wa,-W -o asmtest.ref.o -c asmtest.S
+	$(CC) -Wa,-W -Wa,-mx86-used-note=no -o asmtest.ref.o -c asmtest.S
 	objdump -D asmtest.ref.o > asmtest.ref
 
 ifeq ($(ARCH),arm)
@@ -250,7 +247,7 @@ abitest-% : abitest-%.exe
 	./$< $(TCCFLAGS)
 
 abitest: abitest-cc
-ifneq ($(CONFIG_arm_eabi),yes) # not ARM soft-float
+ifneq (-$(CONFIG_arm_eabi)-$(CONFIG_arm_vfp)-,-yes--)
 abitest: abitest-tcc
 endif
 
@@ -260,6 +257,8 @@ vla_test$(EXESUF): vla_test.c
 vla_test-run: vla_test$(EXESUF)
 	@echo ------------ $@ ------------
 	./vla_test$(EXESUF)
+
+.PHONY: abitest vla_test
 
 asm-c-connect$(EXESUF): asm-c-connect-1.c asm-c-connect-2.c
 	$(TCC) -o $@ $^

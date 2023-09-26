@@ -161,7 +161,7 @@ static pthread_spinlock_t bounds_spin;
 #define HAVE_TLS_FUNC          (1)
 #define HAVE_TLS_VAR           (0)
 #endif
-#ifdef TCC_MUSL
+#if defined TCC_MUSL || defined __ANDROID__
 # undef HAVE_CTYPE
 #endif
 #endif
@@ -225,7 +225,7 @@ typedef struct alloca_list_struct {
 #define BOUND_GET_TID(id)	id = GetCurrentThreadId()
 #elif defined(__OpenBSD__)
 #define BOUND_TID_TYPE		pid_t
-#define BOUND_GET_TID(id)	id = syscall (SYS_getthrid)
+#define BOUND_GET_TID(id)	id = getthrid()
 #elif defined(__FreeBSD__)
 #define BOUND_TID_TYPE		pid_t
 #define BOUND_GET_TID(id)	syscall (SYS_thr_self, &id)
@@ -257,6 +257,8 @@ void splay_printtree(Tree * t, int d);
 
 /* external interface */
 void __bounds_checking (int no_check);
+void __bound_checking_lock (void);
+void __bound_checking_unlock (void);
 void __bound_never_fatal (int no_check);
 DLL_EXPORT void * __bound_ptr_add(void *p, size_t offset);
 DLL_EXPORT void * __bound_ptr_indir1(void *p, size_t offset);
@@ -290,7 +292,9 @@ DLL_EXPORT char *__bound_strncpy(char *dst, const char *src, size_t n);
 DLL_EXPORT int __bound_strcmp(const char *s1, const char *s2);
 DLL_EXPORT int __bound_strncmp(const char *s1, const char *s2, size_t n);
 DLL_EXPORT char *__bound_strcat(char *dest, const char *src);
+DLL_EXPORT char *__bound_strncat(char *dest, const char *src, size_t n);
 DLL_EXPORT char *__bound_strchr(const char *string, int ch);
+DLL_EXPORT char *__bound_strrchr(const char *string, int ch);
 DLL_EXPORT char *__bound_strdup(const char *s);
 
 #if defined(__arm__) && defined(__ARM_EABI__)
@@ -422,7 +426,9 @@ static unsigned long long bound_strncpy_count;
 static unsigned long long bound_strcmp_count;
 static unsigned long long bound_strncmp_count;
 static unsigned long long bound_strcat_count;
+static unsigned long long bound_strncat_count;
 static unsigned long long bound_strchr_count;
+static unsigned long long bound_strrchr_count;
 static unsigned long long bound_strdup_count;
 static unsigned long long bound_not_found;
 #define INCR_COUNT(x)          ++x
@@ -443,7 +449,11 @@ int tcc_backtrace(const char *fmt, ...);
 
 /* print a bound error message */
 #define bound_warning(...) \
-    tcc_backtrace("^bcheck.c^BCHECK: " __VA_ARGS__)
+    do {                                                 \
+        WAIT_SEM ();                                     \
+        tcc_backtrace("^bcheck.c^BCHECK: " __VA_ARGS__); \
+        POST_SEM ();                                     \
+    } while (0)
 
 #define bound_error(...)            \
     do {                            \
@@ -494,6 +504,16 @@ void __bounds_checking (int no_check)
 #else
     fetch_and_add (&no_checking, no_check);
 #endif
+}
+
+void __bound_checking_lock(void)
+{
+    WAIT_SEM ();
+}
+
+void __bound_checking_unlock(void)
+{
+    POST_SEM ();
 }
 
 /* enable/disable checking. This can be used in signal handlers. */
@@ -602,7 +622,8 @@ BOUND_PTR_INDIR(8)
 BOUND_PTR_INDIR(12)
 BOUND_PTR_INDIR(16)
 
-#if defined(__GNUC__) && (__GNUC__ >= 6)
+/* Needed when using ...libtcc1-usegcc=yes in lib/Makefile */
+#if (defined(__GNUC__) && (__GNUC__ >= 6)) || defined(__clang__)
 /*
  * At least gcc 6.2 complains when __builtin_frame_address is used with
  * nonzero argument.
@@ -907,7 +928,7 @@ void __bound_siglongjmp(jmp_buf env, int val)
 }
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ >= 6)
+#if (defined(__GNUC__) && (__GNUC__ >= 6)) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 
@@ -1158,7 +1179,8 @@ void __attribute__((destructor)) __bound_exit(void)
 
     if (inited) {
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined TCC_MUSL && \
-    !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
+    !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
+    !defined(__ANDROID__)
         if (print_heap) {
             extern void __libc_freeres (void);
             __libc_freeres ();
@@ -1242,7 +1264,9 @@ void __attribute__((destructor)) __bound_exit(void)
             fprintf (stderr, "bound_strcmp_count       %llu\n", bound_strcmp_count);
             fprintf (stderr, "bound_strncmp_count      %llu\n", bound_strncmp_count);
             fprintf (stderr, "bound_strcat_count       %llu\n", bound_strcat_count);
+            fprintf (stderr, "bound_strncat_count      %llu\n", bound_strncat_count);
             fprintf (stderr, "bound_strchr_count       %llu\n", bound_strchr_count);
+            fprintf (stderr, "bound_strrchr_count      %llu\n", bound_strrchr_count);
             fprintf (stderr, "bound_strdup_count       %llu\n", bound_strdup_count);
             fprintf (stderr, "bound_not_found          %llu\n", bound_not_found);
 #endif
@@ -1261,6 +1285,7 @@ void __bound_exit_dll(size_t *p)
     dprintf(stderr, "%s, %s()\n", __FILE__, __FUNCTION__);
 
     if (p) {
+        WAIT_SEM ();
 	while (p[0] != 0) {
 	    tree = splay_delete(p[0], tree);
 #if BOUND_DEBUG
@@ -1272,6 +1297,7 @@ void __bound_exit_dll(size_t *p)
 #endif
 	    p += 2;
 	}
+        POST_SEM ();
     }
 }
 
@@ -1921,6 +1947,24 @@ char *__bound_strcat(char *dest, const char *src)
     return strcat(r, s);
 }
 
+char *__bound_strncat(char *dest, const char *src, size_t n)
+{
+    char *r = dest;
+    const char *s = src;
+    size_t len = n;
+
+    dprintf(stderr, "%s, %s(): %p, %p, 0x%lx\n",
+            __FILE__, __FUNCTION__, dest, src, (unsigned long)n);
+    INCR_COUNT(bound_strncat_count);
+    while (*dest++);
+    while (len-- && *src++);
+    __bound_check(r, (dest - r) + (src - s) - 1, "strncat dest");
+    __bound_check(s, src - s, "strncat src");
+    if (check_overlap(r, (dest - r) + (src - s) - 1, s, src - s, "strncat"))
+        return dest;
+    return strncat(r, s, n);
+}
+
 char *__bound_strchr(const char *s, int c)
 {
     const unsigned char *str = (const unsigned char *) s;
@@ -1935,6 +1979,24 @@ char *__bound_strchr(const char *s, int c)
         ++str;
     }
     __bound_check(s, ((const char *)str - s) + 1, "strchr");
+    return *str == ch ? (char *) str : NULL;
+}
+
+char *__bound_strrchr(const char *s, int c)
+{
+    const unsigned char *str = (const unsigned char *) s;
+    unsigned char ch = c;
+
+    dprintf(stderr, "%s, %s(): %p, %d\n",
+            __FILE__, __FUNCTION__, s, ch);
+    INCR_COUNT(bound_strrchr_count);
+    while (*str++);
+    __bound_check(s, (const char *)str - s, "strrchr");
+    while (str != (const unsigned char *)s) {
+        if (*--str == ch)
+            break;
+    }
+    __bound_check(s, (const char *)str - s, "strrchr");
     return *str == ch ? (char *) str : NULL;
 }
 

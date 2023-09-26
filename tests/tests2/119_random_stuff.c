@@ -88,6 +88,17 @@ void tst_cast(void)
   printf ("schar to ushort cast: %x\n", r);
 }
 
+struct {
+    int (*print)(const char *format, ...);
+} tst_indir = {
+    printf
+};
+
+void tst_indir_func(void)
+{
+    tst_indir.print("tst_indir_func %d\n", 10);
+}
+
 int
 main (void)
 {
@@ -105,4 +116,5 @@ main (void)
   tst_compare();
   tst_pack();
   tst_cast();
+  tst_indir_func();
 }

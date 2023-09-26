@@ -18,7 +18,7 @@
 
 #if __SIZEOF_POINTER__ == 4
     /* 32bit systems. */
-#if defined TARGETOS_OpenBSD
+#if defined  __OpenBSD__
     #define __SIZE_TYPE__ unsigned long
     #define __PTRDIFF_TYPE__ long
 #else
@@ -68,7 +68,7 @@
     #define __WINT_TYPE__ int
 #endif
 
-    #if __STDC_VERSION__ == 201112L
+    #if __STDC_VERSION__ >= 201112L
     # define __STDC_NO_ATOMICS__ 1
     # define __STDC_NO_COMPLEX__ 1
     # define __STDC_NO_THREADS__ 1
@@ -125,6 +125,14 @@
     #define __FINITE_MATH_ONLY__ 1
     #define _FORTIFY_SOURCE 0
 
+#elif defined __ANDROID__
+    #define  BIONIC_IOCTL_NO_SIGNEDNESS_OVERLOAD
+    #define  __PRETTY_FUNCTION__ __FUNCTION__
+    #define __has_builtin(x) 0
+    #define __has_feature(x) 0
+    #define _Nonnull
+    #define _Nullable
+
 #else
     /* Linux */
 
@@ -153,7 +161,7 @@
     #define __builtin_huge_valf() 1e50f
     #define __builtin_huge_vall() 1e5000L
 # if defined __APPLE__
-    #define __builtin_nanf(ignored_string) __nan()
+    #define __builtin_nanf(ignored_string) (0.0F/0.0F)
     /* used by floats.h to implement FLT_ROUNDS C99 macro. 1 == to nearest */
     #define __builtin_flt_rounds() 1
     /* used by _fd_def.h */
@@ -200,11 +208,18 @@
                            &~3), *(type *)(ap - ((sizeof(type)+3)&~3)))
 
 #elif defined __aarch64__
+#if defined __APPLE__
+    typedef struct {
+        void *__stack;
+    } __builtin_va_list;
+
+#else
     typedef struct {
         void *__stack, *__gr_top, *__vr_top;
         int   __gr_offs, __vr_offs;
     } __builtin_va_list;
 
+#endif
 #elif defined __riscv
     typedef char *__builtin_va_list;
     #define __va_reg_size (__riscv_xlen >> 3)
@@ -230,7 +245,7 @@
     # define __RENAME(X) __asm__(X)
     #endif
 
-    #ifdef __BOUNDS_CHECKING_ON
+    #ifdef __TCC_BCHECK__
     # define __BUILTINBC(ret,name,params) ret __builtin_##name params __RENAME("__bound_"#name);
     # define __BOUND(ret,name,params) ret name params __RENAME("__bound_"#name);
     #else
@@ -255,7 +270,9 @@
     __BOTH(int, strcmp, (const char*, const char*))
     __BOTH(int, strncmp, (const char*, const char*, __SIZE_TYPE__))
     __BOTH(char*, strcat, (char*, const char*))
+    __BOTH(char*, strncat, (char*, const char*, __SIZE_TYPE__))
     __BOTH(char*, strchr, (const char*, int))
+    __BOTH(char*, strrchr, (const char*, int))
     __BOTH(char*, strdup, (const char*))
 #if defined __ARM_EABI__
     __BOUND(void*,__aeabi_memcpy,(void*,const void*,__SIZE_TYPE__))
@@ -292,5 +309,17 @@
     #undef __BOTH
     #undef __MAYBE_REDIR
     #undef __RENAME
+
+    #define __BUILTIN_EXTERN(name,u) 		\
+        int __builtin_##name(u int);		\
+        int __builtin_##name##l(u long);	\
+        int __builtin_##name##ll(u long long);
+    __BUILTIN_EXTERN(ffs,)
+    __BUILTIN_EXTERN(clz, unsigned)
+    __BUILTIN_EXTERN(ctz, unsigned)
+    __BUILTIN_EXTERN(clrsb,)
+    __BUILTIN_EXTERN(popcount, unsigned)
+    __BUILTIN_EXTERN(parity, unsigned)
+    #undef __BUILTIN_EXTERN
 
     #endif /* ndef __TCC_PP__ */

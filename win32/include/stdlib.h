@@ -544,8 +544,13 @@ extern "C" {
 
   __CRT_INLINE long long __cdecl llabs(long long _j) { return (_j >= 0 ? _j : -_j); }
 
+ #ifdef __TINYC__ /* gr */
+  #define strtoll _strtoi64
+  #define strtoull _strtoui64
+ #else
   long long  __cdecl strtoll(const char* __restrict__, char** __restrict, int);
   unsigned long long  __cdecl strtoull(const char* __restrict__, char** __restrict__, int);
+ #endif
 
   /* these are stubs for MS _i64 versions */
   long long  __cdecl atoll (const char *);

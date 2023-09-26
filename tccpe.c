@@ -324,7 +324,7 @@ static const DWORD pe_sec_flags[] = {
 struct section_info {
     int cls;
     char name[32];
-    DWORD sh_addr;
+    ADDR3264 sh_addr;
     DWORD sh_size;
     DWORD pe_flags;
     Section *sec;
@@ -451,9 +451,9 @@ static DWORD pe_file_align(struct pe_info *pe, DWORD n)
     return (n + (pe->file_align - 1)) & ~(pe->file_align - 1);
 }
 
-static DWORD pe_virtual_align(struct pe_info *pe, DWORD n)
+static ADDR3264 pe_virtual_align(struct pe_info *pe, ADDR3264 n)
 {
-    return (n + (pe->section_align - 1)) & ~(pe->section_align - 1);
+    return (n + (pe->section_align - 1)) & ~(ADDR3264)(pe->section_align - 1);
 }
 
 static void pe_align_section(Section *s, int a)
@@ -618,10 +618,8 @@ static int pe_write(struct pe_info *pe)
     TCCState *s1 = pe->s1;
 
     pf.op = fopen(pe->filename, "wb");
-    if (NULL == pf.op) {
-        tcc_error_noabort("could not write '%s': %s", pe->filename, strerror(errno));
-        return -1;
-    }
+    if (NULL == pf.op)
+        return tcc_error_noabort("could not write '%s': %s", pe->filename, strerror(errno));
 
     pe->sizeofheaders = pe_file_align(pe,
         sizeof (struct pe_header)
@@ -1071,12 +1069,18 @@ static int pe_section_class(Section *s)
 {
     int type, flags;
     const char *name;
-
     type = s->sh_type;
     flags = s->sh_flags;
     name = s->name;
+    if (0 == memcmp(name, ".stab", 5)) {
+        if (0 == s->s1->do_debug)
+            return sec_last;
+        return name[5] ? sec_stabstr : sec_stab;
+    }
     if (flags & SHF_ALLOC) {
-        if (type == SHT_PROGBITS) {
+        if (type == SHT_PROGBITS
+         || type == SHT_INIT_ARRAY
+         || type == SHT_FINI_ARRAY) {
             if (flags & SHF_EXECINSTR)
                 return sec_text;
             if (flags & SHF_WRITE)
@@ -1089,52 +1093,44 @@ static int pe_section_class(Section *s)
                 return sec_pdata;
             return sec_rdata;
         } else if (type == SHT_NOBITS) {
-            if (flags & SHF_WRITE)
-                return sec_bss;
+            return sec_bss;
         }
+        return sec_other;
     } else {
         if (0 == strcmp(name, ".reloc"))
             return sec_reloc;
     }
-    if (0 == memcmp(name, ".stab", 5))
-        return name[5] ? sec_stabstr : sec_stab;
-    if (flags & SHF_ALLOC)
-        return sec_other;
-    return -1;
+    return sec_last;
 }
 
 static int pe_assign_addresses (struct pe_info *pe)
 {
-    int i, k, o, c;
-    DWORD addr;
-    int *section_order;
+    int i, k, n, c, nbs;
+    ADDR3264 addr;
+    int *sec_order, *sec_cls;
     struct section_info *si;
     Section *s;
     TCCState *s1 = pe->s1;
 
     if (PE_DLL == pe->type)
         pe->reloc = new_section(pe->s1, ".reloc", SHT_PROGBITS, 0);
-    // pe->thunk = new_section(pe->s1, ".iedat", SHT_PROGBITS, SHF_ALLOC);
+    //pe->thunk = new_section(pe->s1, ".iedat", SHT_PROGBITS, SHF_ALLOC);
 
-    section_order = tcc_malloc(pe->s1->nb_sections * sizeof (int));
-    for (o = k = 0 ; k < sec_last; ++k) {
-        for (i = 1; i < s1->nb_sections; ++i) {
-            s = s1->sections[i];
-            if (k == pe_section_class(s))
-                section_order[o++] = i;
-        }
+    nbs = s1->nb_sections;
+    sec_order = tcc_mallocz(2 * sizeof (int) * nbs);
+    sec_cls = sec_order + nbs;
+    for (i = 1; i < nbs; ++i) {
+        s = s1->sections[i];
+        k = pe_section_class(s);
+        for (n = i; n > 1 && k < (c = sec_cls[n - 1]); --n)
+            sec_cls[n] = c, sec_order[n] = sec_order[n - 1];
+        sec_cls[n] = k, sec_order[n] = i;
     }
-
     si = NULL;
     addr = pe->imagebase + 1;
 
-    for (i = 0; i < o; ++i) {
-        k = section_order[i];
-        s = s1->sections[k];
-        c = pe_section_class(s);
-
-        if ((c == sec_stab || c == sec_stabstr) && 0 == s1->do_debug)
-            continue;
+    for (i = 1; (c = sec_cls[i]) < sec_last; ++i) {
+        s = s1->sections[sec_order[i]];
 
         if (PE_MERGE_DATA && c == sec_bss)
             c = sec_data;
@@ -1195,28 +1191,31 @@ add_section:
         }
         //printf("%08x %05x %08x %s\n", si->sh_addr, si->sh_size, si->pe_flags, s->name);
     }
-    tcc_free(section_order);
 #if 0
-    for (i = 1; i < s1->nb_sections; ++i) {
-        Section *s = s1->sections[i];
+    for (i = 1; i < nbs; ++i) {
+        Section *s = s1->sections[sec_order[i]];
         int type = s->sh_type;
         int flags = s->sh_flags;
-        printf("section %-16s %-10s %08x %04x %s,%s,%s\n",
+        printf("section %-16s %-10s %p %04x %s,%s,%s\n",
             s->name,
             type == SHT_PROGBITS ? "progbits" :
+            type == SHT_INIT_ARRAY ? "initarr" :
+            type == SHT_FINI_ARRAY ? "finiarr" :
             type == SHT_NOBITS ? "nobits" :
             type == SHT_SYMTAB ? "symtab" :
             type == SHT_STRTAB ? "strtab" :
             type == SHT_RELX ? "rel" : "???",
             s->sh_addr,
-            s->data_offset,
+            (unsigned)s->data_offset,
             flags & SHF_ALLOC ? "alloc" : "",
             flags & SHF_WRITE ? "write" : "",
             flags & SHF_EXECINSTR ? "exec" : ""
             );
+        fflush(stdout);
     }
     s1->verbose = 2;
 #endif
+    tcc_free(sec_order);
     return 0;
 }
 
@@ -1279,7 +1278,7 @@ static int pe_check_symbols(struct pe_info *pe)
             is = pe_add_import(pe, imp_sym);
 
             if (type == STT_FUNC) {
-                unsigned long offset = is->thk_offset;
+                unsigned offset = is->thk_offset;
                 if (offset) {
                     /* got aliased symbol, like stricmp and _stricmp */
                 } else {
@@ -1336,9 +1335,8 @@ static int pe_check_symbols(struct pe_info *pe)
             if (ELFW(ST_BIND)(sym->st_info) == STB_WEAK)
                 /* STB_WEAK undefined symbols are accepted */
                 continue;
-            tcc_error_noabort("undefined symbol '%s'%s", name,
+            ret = tcc_error_noabort("undefined symbol '%s'%s", name,
                 imp_sym < 0 ? ", missing __declspec(dllimport)?":"");
-            ret = -1;
 
         } else if (pe->s1->rdynamic
                    && ELFW(ST_BIND)(sym->st_info) != STB_LOCAL) {
@@ -1533,16 +1531,6 @@ ST_FUNC int pe_putimport(TCCState *s1, int dllindex, const char *name, addr_t va
         );
 }
 
-static int pe_add_dllref(TCCState *s1, const char *dllname)
-{
-    int i;
-    for (i = 0; i < s1->nb_loaded_dlls; ++i)
-        if (0 == strcmp(s1->loaded_dlls[i]->name, dllname))
-            return i + 1;
-    tcc_add_dllref(s1, dllname);
-    return s1->nb_loaded_dlls;
-}
-
 static int read_mem(int fd, unsigned offset, void *buffer, unsigned len)
 {
     lseek(fd, offset, SEEK_SET);
@@ -1732,7 +1720,7 @@ static int pe_load_def(TCCState *s1, int fd)
             ++state;
             break;
         case 2:
-            dllindex = pe_add_dllref(s1, dllname);
+            dllindex = tcc_add_dllref(s1, dllname, 0)->index;
             ++state;
             /* fall through */
         default:
@@ -1769,7 +1757,7 @@ static int pe_load_dll(TCCState *s1, int fd, const char *filename)
     if (ret) {
         return -1;
     } else if (p) {
-        index = pe_add_dllref(s1, filename);
+        index = tcc_add_dllref(s1, filename, 0)->index;
         for (q = p; *q; q += 1 + strlen(q))
             pe_putimport(s1, index, q, 0);
         tcc_free(p);
@@ -1867,12 +1855,6 @@ ST_FUNC void pe_add_unwind_data(unsigned start, unsigned end, unsigned stack)
 #else
 #define PE_STDSYM(n,s) "_" n s
 #endif
-
-static void tcc_add_support(TCCState *s1, const char *filename)
-{
-    if (tcc_add_dll(s1, filename, 0) < 0)
-        tcc_error_noabort("%s not found", filename);
-}
 
 static void pe_add_runtime(TCCState *s1, struct pe_info *pe)
 {
@@ -2005,7 +1987,6 @@ static void pe_set_options(TCCState * s1, struct pe_info *pe)
 
 ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
 {
-    int ret;
     struct pe_info pe;
 
     memset(&pe, 0, sizeof pe);
@@ -2020,9 +2001,9 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
     pe_add_runtime(s1, &pe);
     resolve_common_syms(s1);
     pe_set_options(s1, &pe);
+    pe_check_symbols(&pe);
 
-    ret = pe_check_symbols(&pe);
-    if (ret)
+    if (s1->nb_errors)
         ;
     else if (filename) {
         pe_assign_addresses(&pe);
@@ -2031,10 +2012,8 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
         relocate_sections(s1);
         pe.start_addr = (DWORD)
             (get_sym_addr(s1, pe.start_symbol, 1, 1) - pe.imagebase);
-        if (s1->nb_errors)
-            ret = -1;
-        else
-            ret = pe_write(&pe);
+        if (0 == s1->nb_errors)
+            pe_write(&pe);
         dynarray_reset(&pe.sec_info, &pe.sec_count);
     } else {
 #ifdef TCC_IS_NATIVE
@@ -2046,15 +2025,12 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
 #endif
 #endif
     }
-
     pe_free_imports(&pe);
-
 #if PE_PRINT_SECTIONS
     if (s1->g_debug & 8)
         pe_print_sections(s1, "tcc.log");
 #endif
-    return ret;
+    return s1->nb_errors ? -1 : 0;
 }
 
 /* ------------------------------------------------------------- */
-

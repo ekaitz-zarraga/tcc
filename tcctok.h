@@ -38,6 +38,7 @@
      DEF(TOK_RESTRICT2, "__restrict")
      DEF(TOK_RESTRICT3, "__restrict__")
      DEF(TOK_EXTENSION, "__extension__") /* gcc keyword */
+     DEF(TOK_THREAD_LOCAL, "_Thread_local") /* C11 thread-local storage */
 
      DEF(TOK_GENERIC, "_Generic")
      DEF(TOK_STATIC_ASSERT, "_Static_assert")
@@ -45,6 +46,7 @@
      DEF(TOK_FLOAT, "float")
      DEF(TOK_DOUBLE, "double")
      DEF(TOK_BOOL, "_Bool")
+     DEF(TOK_COMPLEX, "_Complex")
      DEF(TOK_SHORT, "short")
      DEF(TOK_STRUCT, "struct")
      DEF(TOK_UNION, "union")
@@ -94,6 +96,7 @@
      DEF(TOK___VA_ARGS__, "__VA_ARGS__")
      DEF(TOK___COUNTER__, "__COUNTER__")
      DEF(TOK___HAS_INCLUDE, "__has_include")
+     DEF(TOK___HAS_INCLUDE_NEXT, "__has_include_next")
 
 /* special identifiers */
      DEF(TOK___FUNC__, "__func__")
@@ -121,6 +124,8 @@
      DEF(TOK_ALIAS2, "__alias__")
      DEF(TOK_UNUSED1, "unused")
      DEF(TOK_UNUSED2, "__unused__")
+     DEF(TOK_NODEBUG1, "nodebug")
+     DEF(TOK_NODEBUG2, "__nodebug__")
      DEF(TOK_CDECL1, "cdecl")
      DEF(TOK_CDECL2, "__cdecl")
      DEF(TOK_CDECL3, "__cdecl__")
@@ -186,6 +191,13 @@
      DEF_ATOMIC(atomic_fetch_or)
      DEF_ATOMIC(atomic_fetch_xor)
      DEF_ATOMIC(atomic_fetch_and)
+     DEF_ATOMIC(atomic_fetch_nand)
+     DEF_ATOMIC(atomic_add_fetch)
+     DEF_ATOMIC(atomic_sub_fetch)
+     DEF_ATOMIC(atomic_or_fetch)
+     DEF_ATOMIC(atomic_xor_fetch)
+     DEF_ATOMIC(atomic_and_fetch)
+     DEF_ATOMIC(atomic_nand_fetch)
 
 /* pragma */
      DEF(TOK_pack, "pack")
