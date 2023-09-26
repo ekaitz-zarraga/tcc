@@ -97,10 +97,13 @@
     (arguments
       (list
         #:configure-flags
-        #~(list "--debug"
-                "--enable-cross"
+
+        #~(list "--enable-cross"
                 "--disable-rpath"
-                "--extra-cflags=-DHAVE_FLOAT=1 -DHAVE_BITFIELD=1 -DHAVE_LONG_LONG=1 -DHAVE_SETJMP=1")
+                (string-append "--extra-cflags="
+                               "-DHAVE_LONG_LONG=1 "
+                               "-DBOOTSTRAP=1 "
+                               "-DCONFIG_TCC_ELFINTERP=\\\\\"\\\"" #$libccross "/lib/ld-linux-riscv64-lp64d.so.1\\\\\"\\\""))
         #:tests? #f
         #:validate-runpath? #f
         #:phases #~(modify-phases %standard-phases
