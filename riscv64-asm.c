@@ -76,20 +76,11 @@ static void asm_nullary_opcode(TCCState *s1, int token)
 
     // System calls
 
-    case TOK_ASM_scall: // I (pseudo)
+    case TOK_ASM_ecall: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12));
         return;
-    case TOK_ASM_sbreak: // I (pseudo)
+    case TOK_ASM_ebreak: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12) | (1 << 20));
-        return;
-
-    // Privileged Instructions
-
-    case TOK_ASM_ecall:
-        asm_emit_opcode((0x1C << 2) | 3 | (0 << 20));
-        return;
-    case TOK_ASM_ebreak:
-        asm_emit_opcode((0x1C << 2) | 3 | (1 << 20));
         return;
 
     // Other
@@ -126,7 +117,6 @@ typedef struct Operand {
 /* Fixed operands for pseudoinstructions */
 const Operand zero_imm = { OP_IM12S, 0};
 const Operand zero = { OP_REG, 0};
-
 
 /* Parse a text containing operand and store the result in OP */
 static void parse_operand(TCCState *s1, Operand *op)
@@ -679,8 +669,6 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     switch (token) {
     case TOK_ASM_fence:
     case TOK_ASM_fence_i:
-    case TOK_ASM_scall:
-    case TOK_ASM_sbreak:
     case TOK_ASM_ecall:
     case TOK_ASM_ebreak:
     case TOK_ASM_mrts:
@@ -740,11 +728,8 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     case TOK_ASM_addi:
     case TOK_ASM_sub:
     case TOK_ASM_addw:
-    case TOK_ASM_addd:
     case TOK_ASM_addiw:
-    case TOK_ASM_addid:
     case TOK_ASM_subw:
-    case TOK_ASM_subd:
     case TOK_ASM_xor:
     case TOK_ASM_xori:
     case TOK_ASM_or:

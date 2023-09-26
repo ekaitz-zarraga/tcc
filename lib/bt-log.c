@@ -31,13 +31,15 @@ DLL_EXPORT int tcc_backtrace(const char *fmt, ...)
         ret = __rt_error(fp, ip, fmt, ap);
         va_end(ap);
     } else {
-        const char *p;
+        const char *p, *nl = "\n";
         if (fmt[0] == '^' && (p = strchr(fmt + 1, fmt[0])))
             fmt = p + 1;
+        if (fmt[0] == '\001')
+            ++fmt, nl = "";
         va_start(ap, fmt);
         ret = vfprintf(stderr, fmt, ap);
         va_end(ap);
-        fprintf(stderr, "\n"), fflush(stderr);
+        fprintf(stderr, nl), fflush(stderr);
     }
     return ret;
 }

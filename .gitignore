@@ -16,6 +16,8 @@
 a.out
 tcc_g
 tcc
+tcc_c
+tcc_p
 *-tcc
 libtcc*.def
 
@@ -29,6 +31,7 @@ tags
 TAGS
 tcc.1
 *.pod
+*.tcov
 tcc-doc.html
 tcc-doc.info
 

@@ -99,50 +99,12 @@ BOOL WINAPI DllMain (HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved)
 /* on win32, we suppose the lib and includes are at the location of 'tcc.exe' */
 static inline char *config_tccdir_w32(char *path)
 {
-    char temp[1024];
-    char try[1024];
     char *p;
-    int c;
     GetModuleFileName(tcc_module, path, MAX_PATH);
     p = tcc_basename(normalize_slashes(strlwr(path)));
     if (p > path)
         --p;
-
     *p = 0;
-
-    /*
-     * See if we are perhaps in a "bin/" subfolder of the
-     * installation path, in which case the real root of
-     * the installation is one level up. We can test this
-     * by looking for the 'include' folder.
-     */
-    strncpy(temp, path, sizeof(temp)-1);
-    strcat(temp, "/include");
-
-    if (_access(temp, 0) != 0) {
-        /* No 'include' folder found, so go up one level. */
-        strncpy(temp, path, sizeof(temp)-1);
-
-        /* Try this for several "levels" up. */
-        for (c = 0; c < 4; c++) {
-                p = tcc_basename(temp);
-                if (p > temp) {
-                    --p;
-                    *p = '\0';
-                }
-
-                strncpy(try, temp, sizeof(try)-1);
-                strcat(try, "/include");
-
-                if (_access(try, 0) == 0) {
-                        if (p != NULL)
-                                p = '\0';
-                        strcpy(path, temp);
-                        break;
-                }
-        }
-    }
-
     return path;
 }
 #define CONFIG_TCCDIR config_tccdir_w32(alloca(MAX_PATH))
@@ -303,8 +265,8 @@ PUB_FUNC void tcc_free(void *ptr)
 PUB_FUNC void *tcc_malloc(unsigned long size)
 {
     void *ptr;
-    ptr = malloc(size);
-    if (!ptr && size)
+    ptr = malloc(size ? size : 1);
+    if (!ptr)
         mem_error("memory full (malloc)");
     return ptr;
 }
@@ -321,9 +283,15 @@ PUB_FUNC void *tcc_mallocz(unsigned long size)
 PUB_FUNC void *tcc_realloc(void *ptr, unsigned long size)
 {
     void *ptr1;
-    ptr1 = realloc(ptr, size);
-    if (!ptr1 && size)
-        mem_error("memory full (realloc)");
+    if (size == 0) {
+	free(ptr);
+	ptr1 = NULL;
+    }
+    else {
+        ptr1 = realloc(ptr, size);
+        if (!ptr1)
+            mem_error("memory full (realloc)");
+    }
     return ptr1;
 }
 
@@ -504,7 +472,27 @@ PUB_FUNC void tcc_memcheck(int d)
     }
     POST_SEM(&mem_sem);
 }
+
 #endif /* MEM_DEBUG */
+
+#ifdef _WIN32
+# define realpath(file, buf) _fullpath(buf, file, 260)
+#endif
+
+/* for #pragma once */
+ST_FUNC int normalized_PATHCMP(const char *f1, const char *f2)
+{
+    char *p1, *p2;
+    int ret = 1;
+    if (!!(p1 = realpath(f1, NULL))) {
+        if (!!(p2 = realpath(f2, NULL))) {
+            ret = PATHCMP(p1, p2);
+            free(p2); /* using original free */
+        }
+        free(p1);
+    }
+    return ret;
+}
 
 #define free(p) use_tcc_free(p)
 #define malloc(s) use_tcc_malloc(s)
@@ -1154,7 +1142,7 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
             } else {
                 ret = macho_load_tbd(s1, fd, filename, (flags & AFF_REFERENCED_DLL) != 0);
             }
-            break;
+            goto check_success;
         default:
         {
             const char *ext = tcc_fileextension(filename);
@@ -1977,26 +1965,33 @@ dorun:
             break;
 #ifdef CONFIG_TCC_BACKTRACE
         case TCC_OPTION_bt:
-            s->rt_num_callers = atoi(optarg);
+            s->rt_num_callers = atoi(optarg); /* zero = default (6) */
+        enable_backtrace:
             s->do_backtrace = 1;
             s->do_debug = 1;
 	    s->dwarf = DWARF_VERSION;
             break;
-#endif
 #ifdef CONFIG_TCC_BCHECK
         case TCC_OPTION_b:
             s->do_bounds_check = 1;
-            s->do_backtrace = 1;
-            s->do_debug = 1;
-	    s->dwarf = DWARF_VERSION;
-            break;
+            goto enable_backtrace;
+#endif
 #endif
         case TCC_OPTION_g:
-            s->do_debug = 1;
+            s->do_debug = 2;
             s->dwarf = DWARF_VERSION;
-
-            if (strstart("dwarf", &optarg))
+            if (strstart("dwarf", &optarg)) {
                 s->dwarf = (*optarg) ? (0 - atoi(optarg)) : DEFAULT_DWARF_VERSION;
+            } else if (isnum(*optarg)) {
+                x = *optarg - '0';
+                /* -g0 = no info, -g1 = lines/functions only, -g2 = full info */
+                if (x <= 2)
+                    s->do_debug = x;
+#ifdef TCC_TARGET_PE
+            } else if (0 == strcmp(".pdb", optarg)) {
+                s->dwarf = 5, s->do_debug |= 16;
+#endif
+            }
             break;
         case TCC_OPTION_c:
             x = TCC_OUTPUT_OBJ;

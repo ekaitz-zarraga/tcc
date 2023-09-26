@@ -38,7 +38,6 @@
 #include <fcntl.h>
 #include <setjmp.h>
 #include <time.h>
-#include <sys/stat.h>
 
 #ifndef _WIN32
 # include <unistd.h>
@@ -285,7 +284,7 @@ extern long double strtold (const char *__nptr, char **__endptr);
 
 /* library search paths */
 #ifndef CONFIG_TCC_LIBPATHS
-# ifdef TCC_TARGET_PE
+# if defined TCC_TARGET_PE || defined _WIN32
 #  define CONFIG_TCC_LIBPATHS "{B}/lib"
 # else
 #  define CONFIG_TCC_LIBPATHS \
@@ -400,6 +399,7 @@ extern long double strtold (const char *__nptr, char **__endptr);
 
 #ifdef TCC_PROFILE /* profile all functions */
 # define static
+# define inline
 #endif
 
 /* -------------------------------------------- */
@@ -496,7 +496,6 @@ typedef struct CString {
     int size; /* size in bytes */
     int size_allocated;
     void *data; /* either 'char *' or 'nwchar_t *' */
-    struct CString *prev;
 } CString;
 
 /* type definition */
@@ -717,10 +716,6 @@ typedef struct InlineFunc {
 /* include file cache, used to find files faster and also to eliminate
    inclusion if the include file is protected by #ifndef ... #endif */
 typedef struct CachedInclude {
-    struct stat st;
-#ifdef _WIN32
-    unsigned long long hash;
-#endif
     int ifndef_macro;
     int once;
     int hash_next; /* -1 if none */
@@ -1315,6 +1310,8 @@ ST_FUNC char *normalize_slashes(char *path);
 #endif
 ST_FUNC DLLReference *tcc_add_dllref(TCCState *s1, const char *dllname, int level);
 ST_FUNC char *tcc_load_text(int fd);
+/* for #pragma once */
+ST_FUNC int normalized_PATHCMP(const char *f1, const char *f2);
 
 /* tcc_parse_args return codes: */
 #define OPT_HELP 1

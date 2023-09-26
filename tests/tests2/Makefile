@@ -55,6 +55,10 @@ endif
 
 # Some tests might need arguments
 ARGS =
+ifneq (-$(CONFIG_WIN32)-,-yes-)
+22_floating_point.test: FLAGS += -lm
+24_math_library.test: FLAGS += -lm
+endif
 31_args.test : ARGS = arg1 arg2 arg3 arg4 arg5
 46_grep.test : ARGS = '[^* ]*[:a:d: ]+\:\*-/: $$' $(SRC)/46_grep.c
 
@@ -119,6 +123,7 @@ endif
 126_bound_global.test: FLAGS += -b
 126_bound_global.test: NORUN = true
 128_run_atexit.test: FLAGS += -dt
+132_bound_test.test: FLAGS += -b
 
 # Filter source directory in warnings/errors (out-of-tree builds)
 FILTER = 2>&1 | sed -e 's,$(SRC)/,,g'

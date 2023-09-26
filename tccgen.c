@@ -1687,14 +1687,22 @@ static void pop_local_syms(Sym *b, int keep)
     sym_pop(&local_stack, b, keep);
 }
 
+/* increment an lvalue pointer */
+static void incr_offset(int offset)
+{
+    int t = vtop->type.t;
+    gaddrof(); /* remove VT_LVAL */
+    vtop->type.t = VT_PTRDIFF_T; /* set scalar type */
+    vpushs(offset);
+    gen_op('+');
+    vtop->r |= VT_LVAL;
+    vtop->type.t = t;
+}
+
 static void incr_bf_adr(int o)
 {
-    vtop->type = char_pointer_type;
-    gaddrof();
-    vpushs(o);
-    gen_op('+');
     vtop->type.t = VT_BYTE | VT_UNSIGNED;
-    vtop->r |= VT_LVAL;
+    incr_offset(o);
 }
 
 /* single-byte load mode for packed or otherwise unaligned bitfields */
@@ -1860,8 +1868,18 @@ ST_FUNC int gv(int rc)
         r2_ok = !rc2 || ((vtop->r2 < VT_CONST) && (reg_classes[vtop->r2] & rc2));
 
         if (!r_ok || !r2_ok) {
-            if (!r_ok)
-                r = get_reg(rc);
+
+            if (!r_ok) {
+                if (1 /* we can 'mov (r),r' in cases */
+                    && r < VT_CONST
+                    && (reg_classes[r] & rc)
+                    && !rc2
+                    )
+                    save_reg_upstack(r, 1);
+                else
+                    r = get_reg(rc);
+            }
+
             if (rc2) {
                 int load_type = (bt == VT_QFLOAT) ? VT_DOUBLE : VT_PTRDIFF_T;
                 int original_type = vtop->type.t;
@@ -1885,12 +1903,7 @@ ST_FUNC int gv(int rc)
                     vdup();
                     vtop[-1].r = r; /* save register value */
                     /* increment pointer to get second word */
-                    vtop->type.t = VT_PTRDIFF_T;
-                    gaddrof();
-                    vpushs(PTR_SIZE);
-                    gen_op('+');
-                    vtop->r |= VT_LVAL;
-                    vtop->type.t = load_type;
+                    incr_offset(PTR_SIZE);
                 } else {
                     /* move registers */
                     if (!r_ok)
@@ -2461,7 +2474,7 @@ void gen_negf(int op)
 /* generate a floating point operation with constant propagation */
 static void gen_opif(int op)
 {
-    int c1, c2, cast_int = 0;
+    int c1, c2, i, bt;
     SValue *v1, *v2;
 #if defined _MSC_VER && defined __x86_64__
     /* avoid bad optimization with f1 -= f2 for f1:-0.0, f2:0.0 */
@@ -2473,15 +2486,16 @@ static void gen_opif(int op)
     v2 = vtop;
     if (op == TOK_NEG)
         v1 = v2;
+    bt = v1->type.t & VT_BTYPE;
 
     /* currently, we cannot do computations with forward symbols */
     c1 = (v1->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
     c2 = (v2->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
     if (c1 && c2) {
-        if (v1->type.t == VT_FLOAT) {
+        if (bt == VT_FLOAT) {
             f1 = v1->c.f;
             f2 = v2->c.f;
-        } else if (v1->type.t == VT_DOUBLE) {
+        } else if (bt == VT_DOUBLE) {
             f1 = v1->c.d;
             f2 = v2->c.d;
         } else {
@@ -2520,41 +2534,39 @@ static void gen_opif(int op)
             f1 = -f1;
             goto unary_result;
         case TOK_EQ:
-            f1 = f1 == f2;
+            i = f1 == f2;
 	make_int:
-	    cast_int = 1;
-            break;
+            vtop -= 2;
+            vpushi(i);
+            return;
         case TOK_NE:
-            f1 = f1 != f2;
+            i = f1 != f2;
 	    goto make_int;
         case TOK_LT:
-            f1 = f1 < f2;
+            i = f1 < f2;
 	    goto make_int;
         case TOK_GE:
-            f1 = f1 >= f2;
+            i = f1 >= f2;
 	    goto make_int;
         case TOK_LE:
-            f1 = f1 <= f2;
+            i = f1 <= f2;
 	    goto make_int;
         case TOK_GT:
-            f1 = f1 > f2;
+            i = f1 > f2;
 	    goto make_int;
-            /* XXX: also handles tests ? */
         default:
             goto general_case;
         }
         vtop--;
     unary_result:
         /* XXX: overflow test ? */
-        if (v1->type.t == VT_FLOAT) {
+        if (bt == VT_FLOAT) {
             v1->c.f = f1;
-        } else if (v1->type.t == VT_DOUBLE) {
+        } else if (bt == VT_DOUBLE) {
             v1->c.d = f1;
         } else {
             v1->c.ld = f1;
         }
-	if (cast_int)
-	    gen_cast_s(VT_INT);
     } else {
     general_case:
         if (op == TOK_NEG) {
@@ -3748,14 +3760,8 @@ ST_FUNC void vstore(void)
                 vtop[-1].type.t = load_type;
                 store(r, vtop - 1);
                 vswap();
-                /* convert to int to increment easily */
-                vtop->type.t = VT_PTRDIFF_T;
-                gaddrof();
-                vpushs(PTR_SIZE);
-                gen_op('+');
-                vtop->r |= VT_LVAL;
+                incr_offset(PTR_SIZE);
                 vswap();
-                vtop[-1].type.t = load_type;
                 /* XXX: it works because r2 is spilled last ! */
                 store(vtop->r2, vtop - 1);
             } else {
@@ -4022,10 +4028,18 @@ static Sym * find_field (CType *type, int v, int *cumofs)
 {
     Sym *s = type->ref;
     int v1 = v | SYM_FIELD;
-
+    if (!(v & SYM_FIELD)) { /* top-level call */
+        if ((type->t & VT_BTYPE) != VT_STRUCT)
+            expect("struct or union");
+        if (v < TOK_UIDENT)
+            expect("field name");
+        if (s->c < 0)
+            tcc_error("dereferencing incomplete type '%s'",
+                get_tok_str(s->v & ~SYM_STRUCT, 0));
+    }
     while ((s = s->next) != NULL) {
         if (s->v == v1) {
-            *cumofs += s->c;
+            *cumofs = s->c;
             return s;
         }
         if ((s->type.t & VT_BTYPE) == VT_STRUCT
@@ -4038,17 +4052,9 @@ static Sym * find_field (CType *type, int v, int *cumofs)
             }
         }
     }
-
-    if (!(v & SYM_FIELD)) { /* top-level call */
-        s = type->ref;
-        if (s->c < 0)
-            tcc_error("dereferencing incomplete type '%s'",
-                get_tok_str(s->v & ~SYM_STRUCT, 0));
-        else
-            tcc_error("field not found: %s",
-                get_tok_str(v, &tokc));
-    }
-    return NULL;
+    if (!(v & SYM_FIELD))
+        tcc_error("field not found: %s", get_tok_str(v, NULL));
+    return s;
 }
 
 static void check_fields (CType *type, int check)
@@ -5494,25 +5500,12 @@ ST_FUNC void unary(void)
             goto tok_identifier;
         /* fall thru */
     case TOK___FUNC__:
-        {
-            Section *sec;
-            int len;
-            /* special function name identifier */
-            len = strlen(funcname) + 1;
-            /* generate char[len] type */
-            type.t = char_type.t;
-            if (tcc_state->warn_write_strings & WARN_ON)
-                type.t |= VT_CONSTANT;
-            mk_pointer(&type);
-            type.t |= VT_ARRAY;
-            type.ref->c = len;
-            sec = rodata_section;
-            vpush_ref(&type, sec, sec->data_offset, len);
-            if (!NODATA_WANTED)
-                memcpy(section_ptr_add(sec, len), funcname, len);
-            next();
-        }
-        break;
+        tok = TOK_STR;
+        cstr_reset(&tokcstr);
+        cstr_cat(&tokcstr, funcname, 0);
+        tokc.str.size = tokcstr.size;
+        tokc.str.data = tokcstr.data;
+        goto case_TOK_STR;
     case TOK_LSTR:
 #ifdef TCC_TARGET_PE
         t = VT_SHORT | VT_UNSIGNED;
@@ -5521,6 +5514,7 @@ ST_FUNC void unary(void)
 #endif
         goto str_init;
     case TOK_STR:
+    case_TOK_STR:
         /* string parsing */
         t = char_type.t;
     str_init:
@@ -5996,24 +5990,18 @@ special_math_val:
         if (tok == TOK_INC || tok == TOK_DEC) {
             inc(1, tok);
             next();
-        } else if (tok == '.' || tok == TOK_ARROW || tok == TOK_CDOUBLE) {
-            int qualifiers, cumofs = 0;
+        } else if (tok == '.' || tok == TOK_ARROW) {
+            int qualifiers, cumofs;
             /* field */ 
             if (tok == TOK_ARROW) 
                 indir();
             qualifiers = vtop->type.t & (VT_CONSTANT | VT_VOLATILE);
             test_lvalue();
-            gaddrof();
             /* expect pointer on structure */
-            if ((vtop->type.t & VT_BTYPE) != VT_STRUCT)
-                expect("struct or union");
-            if (tok == TOK_CDOUBLE)
-                expect("field name");
             next();
-            if (tok == TOK_CINT || tok == TOK_CUINT)
-                expect("field name");
 	    s = find_field(&vtop->type, tok, &cumofs);
             /* add field offset to pointer */
+            gaddrof();
             vtop->type = char_pointer_type; /* change type to 'char *' */
             vpushi(cumofs);
             gen_op('+');
@@ -6128,10 +6116,20 @@ special_math_val:
 #endif
             } else {
                 /* return value */
-                for (r = ret.r + ret_nregs + !ret_nregs; r-- > ret.r;) {
+                n = ret_nregs;
+                while (n > 1) {
+                    int rc = reg_classes[ret.r] & ~(RC_INT | RC_FLOAT);
+                    /* We assume that when a structure is returned in multiple
+                       registers, their classes are consecutive values of the
+                       suite s(n) = 2^n */
+                    rc <<= --n;
+                    for (r = 0; r < NB_REGS; ++r)
+                        if (reg_classes[r] & rc)
+                            break;
                     vsetc(&ret.type, r, &ret.c);
-                    vtop->r2 = ret.r2; /* Loop only happens when r2 is VT_CONST */
                 }
+                vsetc(&ret.type, ret.r, &ret.c);
+                vtop->r2 = ret.r2;
 
                 /* handle packed struct return */
                 if (((s->type.t & VT_BTYPE) == VT_STRUCT) && ret_nregs) {
@@ -6140,8 +6138,9 @@ special_math_val:
                     size = type_size(&s->type, &align);
                     /* We're writing whole regs often, make sure there's enough
                        space.  Assume register size is power of 2.  */
-                    if (regsize > align)
-                      align = regsize;
+                    size = (size + regsize - 1) & -regsize;
+                    if (ret_align > align)
+                        align = ret_align;
                     loc = (loc - size) & -align;
                     addr = loc;
                     offset = 0;
@@ -6618,11 +6617,12 @@ static void gfunc_return(CType *func_type)
             vstore();
         } else {
             /* returning structure packed into registers */
-            int size, addr, align, rc;
+            int size, addr, align, rc, n;
             size = type_size(func_type,&align);
-            if ((vtop->r != (VT_LOCAL | VT_LVAL) ||
-                 (vtop->c.i & (ret_align-1)))
-                && (align & (ret_align-1))) {
+            if ((align & (ret_align - 1))
+                && ((vtop->r & VT_VALMASK) < VT_CONST /* pointer to struct */
+                    || (vtop->c.i & (ret_align - 1))
+                    )) {
                 loc = (loc - size) & -ret_align;
                 addr = loc;
                 type = *func_type;
@@ -6634,22 +6634,19 @@ static void gfunc_return(CType *func_type)
             }
             vtop->type = ret_type;
             rc = RC_RET(ret_type.t);
-            if (ret_nregs == 1)
+            //printf("struct return: n:%d t:%02x rc:%02x\n", ret_nregs, ret_type.t, rc);
+            for (n = ret_nregs; --n > 0;) {
+                vdup();
                 gv(rc);
-            else {
-                for (;;) {
-                    vdup();
-                    gv(rc);
-                    vpop();
-                    if (--ret_nregs == 0)
-                      break;
-                    /* We assume that when a structure is returned in multiple
-                       registers, their classes are consecutive values of the
-                       suite s(n) = 2^n */
-                    rc <<= 1;
-                    vtop->c.i += regsize;
-                }
+                vswap();
+                incr_offset(regsize);
+                /* We assume that when a structure is returned in multiple
+                   registers, their classes are consecutive values of the
+                   suite s(n) = 2^n */
+                rc <<= 1;
             }
+            gv(rc);
+            vtop -= ret_nregs - 1;
         }
     } else {
         gv(RC_RET(func_type->t));
@@ -7478,9 +7475,6 @@ static int decl_designator(init_params *p, CType *type, unsigned long c,
             l = tok;
         struct_field:
             next();
-            if ((type->t & VT_BTYPE) != VT_STRUCT)
-                expect("struct/union type");
-            cumofs = 0;
 	    f = find_field(type, l, &cumofs);
             if (cur_field)
                 *cur_field = f;
@@ -7761,7 +7755,7 @@ static void decl_initializer(init_params *p, CType *type, unsigned long c, int f
     CType *t1;
 
     /* generate line number info */
-    if (debug_modes && !p->sec)
+    if (debug_modes && !(flags & DIF_SIZE_ONLY) && !p->sec)
         tcc_debug_line(tcc_state), tcc_tcov_check_line (tcc_state, 1);
 
     if (!(flags & DIF_HAVE_ELEM) && tok != '{' &&
@@ -8282,50 +8276,60 @@ static void gen_function(Sym *sym)
     struct scope f = { 0 };
     cur_scope = root_scope = &f;
     nocode_wanted = 0;
+
     ind = cur_text_section->data_offset;
     if (sym->a.aligned) {
 	size_t newoff = section_add(cur_text_section, 0,
 				    1 << (sym->a.aligned - 1));
 	gen_fill_nops(newoff - ind);
     }
-    /* NOTE: we patch the symbol size later */
-    put_extern_sym(sym, cur_text_section, ind, 0);
-    if (sym->type.ref->f.func_ctor)
-        add_array (tcc_state, ".init_array", sym->c);
-    if (sym->type.ref->f.func_dtor)
-        add_array (tcc_state, ".fini_array", sym->c);
 
     funcname = get_tok_str(sym->v, NULL);
     func_ind = ind;
     func_vt = sym->type.ref->type;
     func_var = sym->type.ref->f.func_type == FUNC_ELLIPSIS;
 
+    /* NOTE: we patch the symbol size later */
+    put_extern_sym(sym, cur_text_section, ind, 0);
+
+    if (sym->type.ref->f.func_ctor)
+        add_array (tcc_state, ".init_array", sym->c);
+    if (sym->type.ref->f.func_dtor)
+        add_array (tcc_state, ".fini_array", sym->c);
+
     /* put debug symbol */
     tcc_debug_funcstart(tcc_state, sym);
+
     /* push a dummy symbol to enable local sym storage */
     sym_push2(&local_stack, SYM_FIELD, 0, 0);
     local_scope = 1; /* for function parameters */
     gfunc_prolog(sym);
     tcc_debug_prolog_epilog(tcc_state, 0);
+
     local_scope = 0;
     rsym = 0;
     clear_temp_local_var_list();
     func_vla_arg(sym);
     block(0);
     gsym(rsym);
+
     nocode_wanted = 0;
     /* reset local stack */
     pop_local_syms(NULL, 0);
     tcc_debug_prolog_epilog(tcc_state, 1);
     gfunc_epilog();
+
+    /* end of function */
+    tcc_debug_funcend(tcc_state, ind - func_ind);
+
+    /* patch symbol size */
+    elfsym(sym)->st_size = ind - func_ind;
+
     cur_text_section->data_offset = ind;
     local_scope = 0;
     label_pop(&global_label_stack, NULL, 0);
     sym_pop(&all_cleanups, NULL, 0);
-    /* patch symbol size */
-    elfsym(sym)->st_size = ind - func_ind;
-    /* end of function */
-    tcc_debug_funcend(tcc_state, ind - func_ind);
+
     /* It's better to crash than to generate wrong code */
     cur_text_section = NULL;
     funcname = ""; /* for safety */
@@ -8335,6 +8339,7 @@ static void gen_function(Sym *sym)
     func_ind = -1;
     nocode_wanted = DATA_ONLY_WANTED;
     check_vstack();
+
     /* do this after funcend debug info */
     next();
 }
