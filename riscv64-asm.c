@@ -76,20 +76,11 @@ static void asm_nullary_opcode(TCCState *s1, int token)
 
     // System calls
 
-    case TOK_ASM_scall: // I (pseudo)
+    case TOK_ASM_ecall: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12));
         return;
-    case TOK_ASM_sbreak: // I (pseudo)
+    case TOK_ASM_ebreak: // I (pseudo)
         asm_emit_opcode((0x1C << 2) | 3 | (0 << 12) | (1 << 20));
-        return;
-
-    // Privileged Instructions
-
-    case TOK_ASM_ecall:
-        asm_emit_opcode((0x1C << 2) | 3 | (0 << 20));
-        return;
-    case TOK_ASM_ebreak:
-        asm_emit_opcode((0x1C << 2) | 3 | (1 << 20));
         return;
 
     // Other
@@ -702,8 +693,6 @@ ST_FUNC void asm_opcode(TCCState *s1, int token)
     switch (token) {
     case TOK_ASM_fence:
     case TOK_ASM_fence_i:
-    case TOK_ASM_scall:
-    case TOK_ASM_sbreak:
     case TOK_ASM_ecall:
     case TOK_ASM_ebreak:
     case TOK_ASM_mrts:

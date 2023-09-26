@@ -182,8 +182,9 @@
 
 /* System call */
 
- DEF_ASM(scall)
- DEF_ASM(sbreak)
+ DEF_ASM(ecall)
+ DEF_ASM(ebreak)
+
 
 /* Counters */
 
@@ -195,9 +196,6 @@
  DEF_ASM(rdinstreth)
 
 /* Privileged Instructions */
-
- DEF_ASM(ecall)
- DEF_ASM(ebreak)
 
  DEF_ASM(mrts)
  DEF_ASM(mrth)
