@@ -1147,7 +1147,7 @@ static void gen_opil(int op, int ll)
                     --vtop;
                     if (op >= TOK_ULT && op <= TOK_GT) {
                       vtop->r = VT_CMP;
-                      vtop->c.i = op;
+                      vtop->c.i = TOK_NE;
                       vtop->cmp_r = ireg(d) | 0 << 8;
                     } else
                       vtop[0].r = d;
