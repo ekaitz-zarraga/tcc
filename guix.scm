@@ -100,6 +100,7 @@
 
         #~(list "--enable-cross"
                 "--disable-rpath"
+                "--debug"
                 (string-append "--extra-cflags="
                                "-DHAVE_LONG_LONG=1 "
                                "-DBOOTSTRAP=1 "
@@ -133,7 +134,7 @@
                    (replace 'install
                      (lambda* (#:key inputs outputs #:allow-other-keys)
                               (install-file "riscv64-libtcc1.a"
-                                            (string-append (assoc-ref outputs "out") "/lib/tcc"))
+                                            (string-append (assoc-ref outputs "out") "/lib"))
                               (install-file "riscv64-tcc"
                                             (string-append (assoc-ref outputs "out") "/bin"))
                               (copy-recursively "include"
