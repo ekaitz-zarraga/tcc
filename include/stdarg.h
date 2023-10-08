@@ -67,6 +67,25 @@ typedef struct {
 #define va_end(ap)
 #define va_copy(dest, src) ((dest) = (src))
 
+#elif __riscv
+typedef __builtin_va_list va_list;
+typedef char *__builtin_va_list;
+#define __va_reg_size (__riscv_xlen >> 3)
+#define va_start __builtin_va_start
+#define va_arg __builtin_va_arg
+#define va_copy __builtin_va_copy
+#define va_end __builtin_va_end
+typedef char *__builtin_va_list;
+#define _tcc_align(addr,type) (((unsigned long)addr + __alignof__(type) - 1) \
+                              & -(__alignof__(type)))
+#define __builtin_va_arg(ap,type) (*(sizeof(type) > (2*__va_reg_size) ? *(type **)((ap += __va_reg_size) - __va_reg_size) : (ap = (va_list)(_tcc_align(ap,type) + (sizeof(type)+__va_reg_size - 1)& -__va_reg_size), (type *)(ap - ((sizeof(type)+ __va_reg_size - 1)& -__va_reg_size)))))
+
+#define __builtin_va_end(ap) (void)(ap)
+#ifndef __builtin_va_copy
+# define __builtin_va_copy(dest, src) (dest) = (src)
+#endif
+
+
 #else /* __i386__ */
 typedef char *va_list;
 /* only correct for i386 */
