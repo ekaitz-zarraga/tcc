@@ -300,7 +300,7 @@ static void gen_jal(int token, Operand* op1, Operand* op2) {
     Sym *sym;
     sym = op2->e.sym;
     greloca(cur_text_section, sym, ind, R_RISCV_JAL, 0);
-    gen_le32( 0b1101111 | ENCODE_RD(op1->reg));
+    gen_le32( 0x6f | ENCODE_RD(op1->reg));
 }
 
 static void asm_binary_opcode(TCCState* s1, int token)
@@ -426,7 +426,7 @@ static void asm_jump_opcode(TCCState* s1, int token)
 
     switch (token) {
     case TOK_ASM_jalr:
-         asm_emit_i(token, 0b1100111, &ops[0], &ops[1], &ops[2]);
+         asm_emit_i(token, 0x67, &ops[0], &ops[1], &ops[2]);
          return;
     case TOK_ASM_jal:
          if(ops[1].e.sym){
@@ -445,7 +445,7 @@ static void asm_jump_opcode(TCCState* s1, int token)
                        ((ops[1].e.v & 0x0FF000)>>12)      |
                        ((ops[1].e.v & 0x000800)>>11) <<8  |
                        ((ops[1].e.v & 0x0007FE)>> 1) <<9;
-             gen_le32( 0b1101111 | ENCODE_RD(ops[0].reg) | offset<<12);
+             gen_le32( 0x6f | ENCODE_RD(ops[0].reg) | offset<<12);
              return;
          }
     default:
