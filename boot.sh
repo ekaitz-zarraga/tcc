@@ -31,34 +31,34 @@ case $arch in
          ;;
 esac
 
-if [ "$TCC" = ./mes-tcc ]; then
-    program_prefix=${program_prefix-boot0-}
-elif [ "$TCC" = ./boot0-tcc ]; then
-    program_prefix=${program_prefix-boot1-}
-elif [ "$TCC" = ./boot1-tcc ]; then
-    program_prefix=${program_prefix-boot2-}
-elif [ "$TCC" = ./boot2-tcc ]; then
-    program_prefix=${program_prefix-boot3-}
-elif [ "$TCC" = ./boot3-tcc ]; then
-    program_prefix=${program_prefix-boot4-}
-elif [ "$TCC" = ./boot4-tcc ]; then
-    program_prefix=${program_prefix-boot5-}
-elif [ "$TCC" = ./boot5-tcc ]; then
-    program_prefix=${program_prefix-boot6-}
-elif [ "$TCC" = ./boot6-tcc ]; then
-    program_prefix=${program_prefix-boot7-}
-elif [ "$TCC" = ./boot7-tcc ]; then
-    program_prefix=${program_prefix-boot8-}
-elif [ "$TCC" = ./boot8-tcc ]; then
-    program_prefix=${program_prefix-boot9-}
-elif [ "$TCC" = ./gcc-tcc ]; then
-    program_prefix=${program_prefix-boot0-}
+if [ "$TCC" = ./tcc-mes ]; then
+    program_suffix=${program_suffix--boot0}
+elif [ "$TCC" = ./tcc-boot0 ]; then
+    program_suffix=${program_suffix--boot1}
+elif [ "$TCC" = ./tcc-boot1 ]; then
+    program_suffix=${program_suffix--boot2}
+elif [ "$TCC" = ./tcc-boot2 ]; then
+    program_suffix=${program_suffix--boot3}
+elif [ "$TCC" = ./tcc-boot3 ]; then
+    program_suffix=${program_suffix--boot4}
+elif [ "$TCC" = ./tcc-boot4 ]; then
+    program_suffix=${program_suffix--boot5}
+elif [ "$TCC" = ./tcc-boot5 ]; then
+    program_suffix=${program_suffix--boot6}
+elif [ "$TCC" = ./tcc-boot6 ]; then
+    program_suffix=${program_suffix--boot7}
+elif [ "$TCC" = ./tcc-boot7 ]; then
+    program_suffix=${program_suffix--boot8}
+elif [ "$TCC" = ./tcc-boot8 ]; then
+    program_suffix=${program_suffix--boot9}
+elif [ "$TCC" = ./tcc-gcc ]; then
+    program_suffix=${program_suffix--boot0}
 elif [ "$TCC" = ${cross_prefix}gcc ]; then
-    program_prefix=${program_prefix-boot0-}
+    program_suffix=${program_suffix--boot0}
 elif [ "$TCC" = ./${cross_prefix}tcc ]; then
-    program_prefix=${program_prefix-boot0-}
+    program_suffix=${program_suffix--boot0}
 else
-    program_prefix=${program_prefix-foo-}
+    program_suffix=${program_suffix--foo}
 fi
 
 unset C_INCLUDE_PATH LIBRARY_PATH
@@ -72,14 +72,14 @@ C_INCLUDE_PATH=${C_INCLUDE_PATH-$MES_PREFIX/include}
 LIBRARY_PATH=${LIBRARY_PATH-..$MES_PREFIX/lib}
 interpreter=/lib/mes-loader
 
-if [ "$program_prefix" = "boot0-" ]; then
+if [ "$program_suffix" = "-boot0" ]; then
     BOOT_CPPFLAGS_TCC="
     -D BOOTSTRAP=1
 "
     if $have_long_long; then
         BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG_STUB=1"
     fi
-elif [ "$program_prefix" = "boot1-" ]; then
+elif [ "$program_suffix" = "-boot1" ]; then
     BOOT_CPPFLAGS_TCC="
     -D BOOTSTRAP=1
     -D HAVE_BITFIELD=1
@@ -87,7 +87,7 @@ elif [ "$program_prefix" = "boot1-" ]; then
     if $have_long_long; then
         BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG=1"
     fi
-elif [ "$program_prefix" = "boot2-" ]; then
+elif [ "$program_suffix" = "-boot2" ]; then
     BOOT_CPPFLAGS_TCC="
     -D BOOTSTRAP=1
     -D HAVE_BITFIELD=1
@@ -98,7 +98,7 @@ elif [ "$program_prefix" = "boot2-" ]; then
     if $have_long_long; then
         BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG=1"
     fi
-elif [ "$program_prefix" = "boot3-" ]; then
+elif [ "$program_suffix" = "-boot3" ]; then
     BOOT_CPPFLAGS_TCC="
     -D BOOTSTRAP=1
     -D HAVE_BITFIELD=1
@@ -187,51 +187,52 @@ tcc.o
 "
 fi
 
-echo $TCC                                   \
-     -g                                     \
-     -v                                     \
-     -static                                \
-     -o ${program_prefix}tcc                \
-     $BOOT_CPPFLAGS_TCC                     \
-     $CPPFLAGS_TCC                          \
-     -L .                                   \
+tcc=${program_prefix}tcc${program_suffix}
+
+echo $TCC                                       \
+     -g                                         \
+     -v                                         \
+     -static                                    \
+     -o $tcc                                    \
+     $BOOT_CPPFLAGS_TCC                         \
+     $CPPFLAGS_TCC                              \
+     -L .                                       \
      $files
 
-$TCC                                        \
-    -g                                      \
-    -v                                      \
-    -static                                 \
-    -o ${program_prefix}tcc                 \
-    $BOOT_CPPFLAGS_TCC                      \
-    $CPPFLAGS_TCC                           \
-    -L .                                    \
+$TCC                                            \
+    -g                                          \
+    -v                                          \
+    -static                                     \
+     -o $tcc                                    \
+    $BOOT_CPPFLAGS_TCC                          \
+    $CPPFLAGS_TCC                               \
+    -L .                                        \
     $files
 
 if $REBUILD_LIBC; then
     for i in 1 i n; do
         cp -f $MES_LIB/crt$i.c .
-        ./${program_prefix}tcc -c -g -o ${program_prefix}crt$i.o crt$i.c
-        cp -f ${program_prefix}crt$i.o crt$i.o
+        ./$tcc -c -g -o crt$i${program_suffix}.o crt$i.c
+        cp -f crt$i${program_suffix}.o crt$i.o
     done
 
     rm -f libtcc1.a
-    ./${program_prefix}tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -o libtcc1.o $MES_LIB/libtcc1.c
-    ./${program_prefix}tcc -ar rc libtcc1.a libtcc1.o
+    ./$tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -o libtcc1.o $MES_LIB/libtcc1.c
+    ./$tcc -ar rc libtcc1.a libtcc1.o
 
     if [ $mes_cpu = arm ]; then
-        ./${program_prefix}tcc -c -g $BOOT_CPPFLAGS lib/armeabi.c
-
-        ./${program_prefix}tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1-tcc.o lib/libtcc1.c
-        ./${program_prefix}tcc -ar rc libtcc1-tcc.a libtcc1-tcc.o armeabi.o
+        ./$tcc -c -g $BOOT_CPPFLAGS_TCC lib/armeabi.c
+        ./$tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1-tcc.o lib/libtcc1.c
+        ./$tcc -ar rc libtcc1-tcc.a libtcc1-tcc.o armeabi.o
 
         # BOOTSTRAP: => Bus error
-        ##./${program_prefix}tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1-mes.o $MES_LIB/libtcc1.c
-        ##./${program_prefix}tcc -c -g $CPP_TARGET_FLAG -D BOOTSTRAP=1 -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -o libtcc1-mes.o $MES_LIB/libtcc1.c
-        ./${program_prefix}tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -o libtcc1-mes.o $MES_LIB/libtcc1.c
-        ./${program_prefix}tcc -ar rc libtcc1-mes.a libtcc1-mes.o armeabi.o
+        ##./$tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1-mes.o $MES_LIB/libtcc1.c
+        ##./$tcc -c -g $CPP_TARGET_FLAG -D BOOTSTRAP=1 -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -o libtcc1-mes.o $MES_LIB/libtcc1.c
+        ./$tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -o libtcc1-mes.o $MES_LIB/libtcc1.c
+        ./$tcc -ar rc libtcc1-mes.a libtcc1-mes.o armeabi.o
 
-        ./${program_prefix}tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1.o lib/libtcc1.c
-        ./${program_prefix}tcc -ar rc libtcc1.a libtcc1.o armeabi.o
+        ./$tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1.o lib/libtcc1.c
+        ./$tcc -ar rc libtcc1.a libtcc1.o armeabi.o
         cp -f libtcc1-mes.a $prefix/lib/tcc
     fi
 

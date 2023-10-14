@@ -127,11 +127,11 @@ for f in $files; do
        $i.c
 done
 
-[ -z "$V" ] && echo "  CCLD       mes-tcc"
-sh $MESCC $verbose -o mes-tcc -L $MES_SOURCE/mescc-lib -L $MES_SOURCE/lib $files -l c+tcc
+[ -z "$V" ] && echo "  CCLD       tcc-mes"
+sh $MESCC $verbose -o tcc-mes -L $MES_SOURCE/mescc-lib -L $MES_SOURCE/lib $files -l c+tcc
 
-CC="./mes-tcc"
-AR="./mes-tcc -ar"
+CC="./tcc-mes"
+AR="./tcc-mes -ar"
 CPPFLAGS="
 -I $MES_PREFIX/include
 -I $MES_PREFIX/lib
@@ -199,17 +199,17 @@ export mes_cpu
 export prefix
 export CPPFLAGS
 
-TCC=./mes-tcc sh boot.sh
-TCC=./boot0-tcc sh boot.sh
-TCC=./boot1-tcc sh boot.sh
-TCC=./boot2-tcc sh boot.sh
-TCC=./boot3-tcc sh boot.sh
-TCC=./boot4-tcc sh boot.sh
-TCC=./boot5-tcc sh boot.sh
+TCC=./tcc-mes sh boot.sh
+TCC=./tcc-boot0 sh boot.sh
+TCC=./tcc-boot1 sh boot.sh
+TCC=./tcc-boot2 sh boot.sh
+TCC=./tcc-boot3 sh boot.sh
+TCC=./tcc-boot4 sh boot.sh
+TCC=./tcc-boot5 sh boot.sh
 if cmp --help; then
-    cmp boot5-tcc boot6-tcc
+    cmp tcc-boot5 tcc-boot6
 fi
-cp -f boot5-tcc tcc
+cp -f tcc-boot5 tcc
 
 CC=./tcc
 AR='./tcc -ar'
