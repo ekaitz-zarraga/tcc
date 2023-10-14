@@ -41,7 +41,7 @@ rm -f "$b".mes-out
    "$c".c \
     2> "$b".mes-gcc-stderr
 set +e
-${MES_TCC-./mes-tcc}\
+${TCC_MES-./tcc-mes}\
     -static -g -o "$b".mes-out
    -I.\
    -I $MES_PREFIX/lib\

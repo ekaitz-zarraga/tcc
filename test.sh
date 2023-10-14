@@ -60,7 +60,7 @@ fi
 t=${1-lib/tests/scaffold/t.c}
 b=$(dirname "$t")/$(basename "$t" .c)
 co="$b"-$triplet-tcc
-mo="$b"-mes-tcc
+mo="$b"-tcc-mes
 
 o="$co"
 
@@ -105,7 +105,7 @@ if [ -x $GCC_TCC ]; then
     fi
 fi
 
-o="$b"-mes-tcc
+o="$b"-tcc-mes
 $TCC                                            \
     -c                                          \
     -g                                          \

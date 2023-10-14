@@ -4,5 +4,5 @@
 export C_INCLUDE_PATH=/home/janneke/src/mes/include
 export LIBRARY_PATH=/home/janneke/src/tinycc-seed
 
-./configure --cc='mes-tcc -static' --cpu=i386
+./configure --cc='tcc-mes -static' --cpu=i386
 make ONE_SOURCE=yes CPPFLAGS=-DONE_SOURCE=yes

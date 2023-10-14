@@ -82,7 +82,7 @@ PREPROCESS=${PREPROCESS-true}
 ONE_SOURCE=${ONE_SOURCE-false}
 
 interpreter=/lib/mes-loader
-rm -f tcc.E tcc.hex2 tcc.M1 tcc.m1 mes-tcc boot?-tcc
+rm -f tcc.E tcc.hex2 tcc.M1 tcc.m1 tcc-mes tcc-boot?
 
 verbose=
 if test "$V" = 1; then
@@ -128,14 +128,14 @@ fi
 $MESCC                                          \
     $MESCCFLAGS                                 \
     -g                                          \
-    -o mes-tcc                                  \
+    -o tcc-mes                                  \
     -L $MES_SOURCE/mescc-lib                    \
     -L $MES_SOURCE/lib                          \
     $files                                      \
     -l c+tcc
 
-CC="./mes-tcc"
-AR="./mes-tcc -ar"
+CC="./tcc-mes"
+AR="./tcc-mes -ar"
 CPPFLAGS="
 -I $MES_PREFIX/include
 -I $MES_PREFIX/lib
@@ -220,14 +220,14 @@ cp *.S mes-usr
 cp *.a mes-usr
 
 REBUILD_LIBC=true
-TCC=./mes-tcc sh boot.sh
-TCC=./boot0-tcc sh boot.sh
-TCC=./boot1-tcc sh boot.sh
-TCC=./boot2-tcc sh boot.sh
-TCC=./boot3-tcc sh boot.sh
-TCC=./boot4-tcc sh boot.sh
-TCC=./boot5-tcc sh boot.sh
-cmp boot5-tcc boot6-tcc
-cp -f boot5-tcc tcc
+TCC=./tcc-mes sh boot.sh
+TCC=./tcc-boot0 sh boot.sh
+TCC=./tcc-boot1 sh boot.sh
+TCC=./tcc-boot2 sh boot.sh
+TCC=./tcc-boot3 sh boot.sh
+TCC=./tcc-boot4 sh boot.sh
+TCC=./tcc-boot5 sh boot.sh
+cmp tcc-boot5 tcc-boot6
+cp -f tcc-boot5 tcc
 
 echo "build.sh: done"

@@ -33,7 +33,7 @@ rm -f 1 2 1.elf 2.elf 1.a 2.a
 ./tcc -c -I $MES_PREFIX/include $MES_SOURCE/scaffold/main.c 2>/dev/null
 ./$triplet-tcc -o main.$triplet-o -c -I $MES_PREFIX/include $MES_SOURCE/scaffold/main.c 2> 1
 set +e
-./mes-tcc -o main.mes-o -c -I $MES_PREFIX/include $MES_SOURCE/scaffold/main.c &> 2
+./tcc-mes -o main.mes-o -c -I $MES_PREFIX/include $MES_SOURCE/scaffold/main.c &> 2
 diff -y 1 2
 readelf -a main.$triplet-o > 1.elf
 readelf -a main.mes-o > 2.elf

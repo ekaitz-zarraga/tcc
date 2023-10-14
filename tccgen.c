@@ -6345,7 +6345,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c)
 		    *(long double *)ptr = vtop->c.ld;
 #else
                 {
-                  // XXX TODO: breaks on mescc/mes-tcc based build
+                  // XXX TODO: breaks on mescc/tcc-mes based build
                   // maybe disable with HAVE_LONG_DOUBLE?
                   //struct long_double *ldptr = ptr;
                   //struct long_double tmp = (struct long_double)vtop->c.ld;
