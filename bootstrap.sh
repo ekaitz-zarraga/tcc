@@ -32,6 +32,14 @@ case "$mes_cpu" in
         have_long_long=${have_long_long-true}
         have_setjmp=${have_setjmp-false}
         ;;
+    riscv*)
+        cpu=riscv64
+        mes_cpu=riscv64
+        tcc_cpu=riscv64
+        triplet=riscv64-unknown-linux-gnu
+        have_long_long=true
+        cross_prefix=${triplet}-
+        ;;
     amd64)
         tcc_cpu=x86_64
         mes_cpu=x86_64
@@ -78,9 +86,11 @@ CPPFLAGS="
 if test "$mes_cpu" = x86; then
     CPP_TARGET_FLAG=" -D TCC_TARGET_I386=1"
 elif test "$mes_cpu" = arm; then
-    CPP_TARGET_FLAG="-D TCC_TARGET_ARM=1 -D TCC_ARM_VFP=1 -D CONFIG_TCC_LIBTCC1_MES=1"
+    CPP_TARGET_FLAG=" -D TCC_TARGET_ARM=1 -D TCC_ARM_VFP=1 -D CONFIG_TCC_LIBTCC1_MES=1"
 elif test "$mes_cpu" = x86_64; then
     CPP_TARGET_FLAG=" -D TCC_TARGET_X86_64=1"
+elif test "$mes_cpu" = riscv64; then
+    CPP_TARGET_FLAG=" -D TCC_TARGET_RISCV64=1 -D HAVE_LONG_LONG=1"
 else
     echo "cpu not supported: $mes_cpu"
 fi
@@ -95,12 +105,16 @@ $CPP_TARGET_FLAG
 -D CONFIG_TCC_LIBPATHS=\"$prefix/lib:"{B}"/lib:.\"
 -D CONFIG_TCC_SYSINCLUDEPATHS=\"$MES_PREFIX/include:$prefix/include:"{B}"/include\"
 -D TCC_LIBGCC=\"$prefix/lib/libc.a\"
--D TCC_LIBTCC1_MES=\"libtcc1-mes.a\"
 -D CONFIG_TCCBOOT=1
 -D CONFIG_TCC_STATIC=1
 -D CONFIG_USE_LIBGCC=1
 -D TCC_MES_LIBC=1
 "
+
+if [ "$mes_cpu" != riscv64 ]; then
+    CPPFLAGS_TCC="$CPPFLAGS_TCC
+    -D TCC_LIBTCC1_MES=\"libtcc1-mes.a\""
+fi
 
 if $ONE_SOURCE; then
     files="tcc.s"
@@ -138,6 +152,7 @@ CPPFLAGS="
 -I $MES_PREFIX/lib
 -D BOOTSTRAP=1
 "
+
 CFLAGS=
 
 REBUILD_LIBC=${REBUILD_LIBC-true}
@@ -171,6 +186,12 @@ if $REBUILD_LIBC; then
         $AR cr libtcc1-mes.a libtcc1-mes.o
 
         cp -f libtcc1-mes.a $prefix/lib/tcc
+    fi
+    if [ $mes_cpu = riscv64 ]; then
+        rm libtcc1.a libtcc1.o
+        $CC -c -D HAVE_CONFIG_H=1 -I ${MES_PREFIX}/include -I ${MES_PREFIX}/include/linux/${MES_ARCH} -o libtcc1.o ${MES_PREFIX}/lib/libtcc1.c
+        $CC -c -D HAVE_CONFIG_H=1 -I ${MES_PREFIX}/include -I ${MES_PREFIX}/include/linux/${MES_ARCH} -o lib-arm64.o lib/lib-arm64.c
+        $AR cr libtcc1.a libtcc1.o lib-arm64.o
     fi
 
     rm -f libgetopt.a
@@ -225,9 +246,11 @@ if true; then
     $CC -c -g $CPPFLAGS $CFLAGS libc.c
     $AR cr libc.a libc.o
 
-    rm -f libtcc1.a
-    $CC -c -g $CPPFLAGS $CPP_TARGET_FLAG $CFLAGS lib/libtcc1.c
-    $AR cr libtcc1.a libtcc1.o
+    if [ $mes_cpu != riscv64 ]; then
+        rm -f libtcc1.a
+        $CC -c -g $CPPFLAGS $CPP_TARGET_FLAG $CFLAGS lib/libtcc1.c
+        $AR cr libtcc1.a libtcc1.o
+    fi
 
     if [ $mes_cpu = arm ]; then
         $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG lib/armeabi.c
@@ -243,6 +266,11 @@ if true; then
 
         cp -f libtcc1-tcc.a $prefix/lib/tcc
         cp -f libtcc1-mes.a $prefix/lib/tcc
+    fi
+    if [ $mes_cpu = riscv64 ]; then
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG lib/lib-arm64.c
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG libtcc1.o $MES_LIB/libtcc1.c
+        $AR cr libtcc1.a libtcc1.o lib-arm64.o
     fi
 
     rm -f libgetopt.a

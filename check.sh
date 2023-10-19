@@ -19,6 +19,12 @@ case $arch in
          triplet=arm-unknown-linux-gnueabihf
          cross_prefix=${triplet}-
          ;;
+     riscv64*)
+         cpu=riscv64
+         tcc_cpu=riscv64
+         triplet=riscv64-unknown-linux
+         cross_prefix=${triplet}-
+         ;;
      *)
          cpu=x86
          tcc_cpu=i386
