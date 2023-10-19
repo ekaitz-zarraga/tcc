@@ -36,6 +36,8 @@ else
     mes_cpu=${host%%-*}
 fi
 case "$mes_cpu" in
+    # TODO: riscv64: this file is not involved in bootstrapping, so we didn't
+    # add riscv64 support
     i386|i486|i586|i686|x86)
         mes_cpu=x86
         tcc_cpu=i386

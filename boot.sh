@@ -6,8 +6,8 @@ if [ "$V" = 1 -o "$V" = 2 ]; then
     set -x
 fi
 
-arch=${arch-$(uname -m)}
-case $arch in
+mes_cpu=${mes_cpu-$(uname -m)}
+case $mes_cpu in
      aarch*)
          cpu=arm
          mes_cpu=arm
@@ -20,6 +20,13 @@ case $arch in
          mes_cpu=arm
          tcc_cpu=arm
          triplet=arm-unknown-linux-gnueabihf
+         cross_prefix=${triplet}-
+         ;;
+     riscv*)
+         cpu=riscv64
+         mes_cpu=riscv64
+         tcc_cpu=riscv64
+         triplet=riscv64-unknown-linux-gnu
          cross_prefix=${triplet}-
          ;;
      *)
@@ -77,7 +84,11 @@ if [ "$program_suffix" = "-boot0" ]; then
     -D BOOTSTRAP=1
 "
     if $have_long_long; then
-        BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG_STUB=1"
+        if [ $mes_cpu = riscv64 ]; then
+            BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG=1"
+        else
+            BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_LONG_LONG_STUB=1"
+        fi
     fi
 elif [ "$program_suffix" = "-boot1" ]; then
     BOOT_CPPFLAGS_TCC="
@@ -133,6 +144,9 @@ elif test "$mes_cpu" = arm; then
 elif test "$mes_cpu" = x86_64; then
     BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_SETJMP=1"
     CPP_TARGET_FLAG="-D TCC_TARGET_X86_64=1"
+elif test "$mes_cpu" = riscv64; then
+    BOOT_CPPFLAGS_TCC="$BOOT_CPPFLAGS_TCC -D HAVE_SETJMP=1"
+    CPP_TARGET_FLAG="-D TCC_TARGET_RISCV64=1"
 else
     echo "cpu not supported: $mes_cpu"
 fi
@@ -149,12 +163,21 @@ $CPP_TARGET_FLAG
 -D CONFIG_TCC_LIBPATHS=\"$prefix/lib:"{B}"/lib:.\"
 -D CONFIG_TCC_SYSINCLUDEPATHS=\"$MES_PREFIX/include:$prefix/include:"{B}"/include\"
 -D TCC_LIBGCC=\"$prefix/lib/libc.a\"
--D TCC_LIBTCC1_MES=\"libtcc1-mes.a\"
 -D CONFIG_TCCBOOT=1
 -D CONFIG_TCC_STATIC=1
 -D CONFIG_USE_LIBGCC=1
 -D TCC_MES_LIBC=1
 "
+
+if [ "$mes_cpu" = riscv64 ]; then
+    CPPFLAGS_TCC="$CPPFLAGS_TCC
+    -D TCC_LIBTCC1=\"libtcc1.a\"
+    "
+else
+    CPPFLAGS_TCC="$CPPFLAGS_TCC
+    -D TCC_LIBTCC1_MES=\"libtcc1-mes.a\"
+    "
+fi
 
 if $ONE_SOURCE; then
     CPPFLAGS_TCC="$CPPFLAGS_TCC -D ONE_SOURCE=1"
@@ -216,9 +239,11 @@ if $REBUILD_LIBC; then
         cp -f crt$i${program_suffix}.o crt$i.o
     done
 
-    rm -f libtcc1.a
-    ./$tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -o libtcc1.o $MES_LIB/libtcc1.c
-    ./$tcc -ar rc libtcc1.a libtcc1.o
+    if [ $mes_cpu != riscv64 ]; then
+        rm -f libtcc1.a
+        ./$tcc -c -g $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -o libtcc1.o $MES_LIB/libtcc1.c
+        ./$tcc -ar rc libtcc1.a libtcc1.o
+    fi
 
     if [ $mes_cpu = arm ]; then
         ./$tcc -c -g $BOOT_CPPFLAGS_TCC lib/armeabi.c
@@ -234,6 +259,11 @@ if $REBUILD_LIBC; then
         ./$tcc -c -g $CPP_TARGET_FLAG $BOOT_CPPFLAGS_TCC -o libtcc1.o lib/libtcc1.c
         ./$tcc -ar rc libtcc1.a libtcc1.o armeabi.o
         cp -f libtcc1-mes.a $prefix/lib/tcc
+    fi
+    if [ $mes_cpu = riscv64 ]; then
+        ./$tcc -c -g $BOOT_CPPFLAGS_TCC lib/lib-arm64.c
+        ./$tcc -c -g $BOOT_CPPFLAGS_TCC $CPP_TARGET_FLAG -o libtcc1.o $MES_LIB/libtcc1.c
+        ./$tcc -ar rc libtcc1.a libtcc1.o lib-arm64.o
     fi
 
     cp -f libtcc1.a $prefix/lib/tcc
