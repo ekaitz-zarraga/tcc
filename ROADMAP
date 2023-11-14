@@ -1,10 +1,7 @@
 -*- mode: org; coding: utf-8; -*-
 
 * TODO
-  - RISC-V support
-    - finish and merge wip-riscv
-    - finish and merge riscv-mes
-  - Remove HACKs
+  - Check ARM to remove HACKs
     + HACK bootstrappable: ARM: "tccpp_ok".
     + HACK bootstrappable: ARM: "tccgen_ok".
     + (bits of) bootstrappable: ARM: HAVE_FLOAT?
@@ -12,9 +9,12 @@
     + ./doit, build-32.sh, build.sh => have_setjmp=true
   - integrate ARM ./bootstrap.sh build into commencement.scm
     + build gcc-2.95.3 ...etc, etc.
-  - release GNU Mes 0.25
 
 * DONE
+  - RISC-V support
+    - finish and merge wip-riscv
+    - finish and merge riscv-mes
+  - release GNU Mes 0.25
   - ./bootstrap.sh produces boot5-tcc running on mes
   - ./doit: produces a fixpoint compiler boot5-tcc that can build
     tinycc-0.9.27
