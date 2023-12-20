@@ -235,8 +235,8 @@ $TCC                                            \
 if $REBUILD_LIBC; then
     for i in 1 i n; do
         cp -f $MES_LIB/crt$i.c .
-        ./$tcc -c -g -o ${program_prefix}crt$i.o crt$i.c
-        cp -f ${program_prefix}crt$i.o crt$i.o
+        ./$tcc -c -g -o crt$i${program_suffix}.o crt$i.c
+        cp -f crt$i${program_suffix}.o crt$i.o
     done
 
     if [ $mes_cpu != riscv64 ]; then
