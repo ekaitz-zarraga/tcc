@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     switch(argc == 2 ? argv[1][0] : 0) {
         case 'b':
         {
-            volatile unsigned foo = 0x01234567;
+            unsigned foo = 0x01234567;
             puts(*(unsigned char*)&foo == 0x67 ? "no" : "yes");
             break;
         }
