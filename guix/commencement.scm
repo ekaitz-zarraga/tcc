@@ -304,52 +304,12 @@ pure Scheme to Tar and decompression in one easy step.")
     ("bootar" ,bootar)
     ("guile" ,%bootstrap-guile)))
 
-(define bootstrap-seeds
-  (package
-    (name "bootstrap-seeds")
-    (version "1.0.0")
-    (source (origin
-              (method url-fetch)
-              (uri (list
-                    (string-append "mirror://gnu/guix/mirror/"
-                                   "bootstrap-seeds-" version ".tar.gz")
-                    (string-append
-                     "https://lilypond.org/janneke/guix/20220501/"
-                     "bootstrap-seeds-" version ".tar.gz")))
-       (sha256
-        (base32
-         "0scz2bx8fd8c821h6y1j3x6ywgxxns7iinyn9z32dnkiacfdcpfn"))))
-    (native-inputs (list bootar))
-    (build-system trivial-build-system)
-    (arguments
-     (list #:guile %bootstrap-guile
-           #:modules '((guix build utils))
-           #:builder
-           #~(begin
-               (use-modules (guix build utils))
-               (let ((source #$(package-source this-package))
-                     (tar #$(this-package-native-input "bootar"))
-                     (out #$output))
-                 (setenv "PATH" (string-append tar "/bin:"))
-                 (invoke "tar" "xvf" source)
-                 (mkdir-p out)
-                 (copy-recursively "bootstrap-seeds" out)))))
-    (home-page "https://github.com/oriansj/bootstrap-seeds")
-    (synopsis "The initial bootstrap seeds: 357-byte hex0 and kaem shell")
-    (description
-     "This package provides pre-built binaries of the bootstrap seeds.  It
-contains a hex0-seed and an optional kaem-minimal shell.  The size of the hex0
-seeds are for knight: 250 bytes, x86-linux: 357 bytes, x86_64-linux: 431
-bytes, and aarch64-linux 526 bytes.  These can be used to build stage0: hex0,
-hex1, hex2, M1, and M2-Planet.")
-    (license license:gpl3+)))
-
 (define-public stage0-posix
   ;; The initial bootstrap package: no binary inputs except those from
   ;; `bootstrap-seeds, for x86 a 357 byte binary seed: `x86/hex0-seed'.
     (package
       (name "stage0-posix")
-      (version "1.4")
+      (version "1.6.0")
       (source (origin
                 (method git-fetch)
                 (uri (git-reference
@@ -362,9 +322,7 @@ hex1, hex2, M1, and M2-Planet.")
       (supported-systems '("i686-linux" "x86_64-linux"
                            "aarch64-linux"
                            "riscv64-linux"))
-      (native-inputs
-       `(("bootstrap-seeds" ,bootstrap-seeds)
-         ,@(%boot-gash-inputs)))
+      (native-inputs (%boot-gash-inputs))
       (build-system trivial-build-system)
       (arguments
        (list
@@ -373,9 +331,7 @@ hex1, hex2, M1, and M2-Planet.")
         #:builder
         #~(begin
             (use-modules (guix build utils))
-            (let* ((bootstrap-seeds #$(this-package-native-input
-                                       "bootstrap-seeds"))
-                   (source #$(package-source this-package))
+            (let* ((source #$(package-source this-package))
                    (tar #$(this-package-native-input "bootar"))
                    (bash #$(this-package-native-input "bash"))
                    (coreutils #$(this-package-native-input "coreutils"))
@@ -461,7 +417,8 @@ MesCC-Tools), and finally M2-Planet.")
                                            dir "/nyacc-1.00.2/module"))
                 (invoke "gash" "configure.sh"
                         (string-append "--prefix=" out)
-                        "--host=riscv64-linux-gnu"))))
+                        "--host=" #$(or (%current-target-system)
+                                        (%current-system))))))
           (replace 'build
             (lambda _
               (invoke "gash" "bootstrap.sh")))
