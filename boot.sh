@@ -261,9 +261,9 @@ if $REBUILD_LIBC; then
         cp -f libtcc1-mes.a $prefix/lib/tcc
     fi
     if [ $mes_cpu = riscv64 ]; then
-        .$tcc -c -g $BOOT_CPPFLAGS_TCC lib/lib-arm64.c
-        .$tcc -c -g $BOOT_CPPFLAGS_TCC $CPP_TARGET_FLAG -o libtcc1.o $MES_LIB/libtcc1.c
-        .$tcc -ar rc libtcc1.a libtcc1.o lib-arm64.o
+        ./$tcc -c -g $BOOT_CPPFLAGS_TCC lib/lib-arm64.c
+        ./$tcc -c -g $BOOT_CPPFLAGS_TCC $CPP_TARGET_FLAG -o libtcc1.o $MES_LIB/libtcc1.c
+        ./$tcc -ar rc libtcc1.a libtcc1.o lib-arm64.o
     fi
 
     cp -f libtcc1.a $prefix/lib/tcc
