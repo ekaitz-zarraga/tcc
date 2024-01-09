@@ -479,21 +479,6 @@ PUB_FUNC void tcc_memcheck(int d)
 # define realpath(file, buf) _fullpath(buf, file, 260)
 #endif
 
-/* for #pragma once */
-ST_FUNC int normalized_PATHCMP(const char *f1, const char *f2)
-{
-    char *p1, *p2;
-    int ret = 1;
-    if (!!(p1 = realpath(f1, NULL))) {
-        if (!!(p2 = realpath(f2, NULL))) {
-            ret = PATHCMP(p1, p2);
-            free(p2); /* using original free */
-        }
-        free(p1);
-    }
-    return ret;
-}
-
 #define free(p) use_tcc_free(p)
 #define malloc(s) use_tcc_malloc(s)
 #define realloc(p, s) use_tcc_realloc(p, s)

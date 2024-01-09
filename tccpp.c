@@ -1638,11 +1638,6 @@ static CachedInclude *search_cached_include(TCCState *s1, const char *filename, 
         e = s1->cached_includes[i - 1];
         if (0 == PATHCMP(filename, e->filename))
             return e;
-        if (e->once
-            && 0 == PATHCMP(basename, tcc_basename(e->filename))
-            && 0 == normalized_PATHCMP(filename, e->filename)
-            )
-            return e;
         i = e->hash_next;
     }
     if (!add)
