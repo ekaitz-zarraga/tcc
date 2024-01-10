@@ -189,8 +189,8 @@ if $REBUILD_LIBC; then
     fi
     if [ $mes_cpu = riscv64 ]; then
         rm libtcc1.a libtcc1.o
-        $CC -c -D HAVE_CONFIG_H=1 -I ${MES_PREFIX}/include -I ${MES_PREFIX}/include/linux/${MES_ARCH} -o libtcc1.o ${MES_PREFIX}/lib/libtcc1.c
-        $CC -c -D HAVE_CONFIG_H=1 -I ${MES_PREFIX}/include -I ${MES_PREFIX}/include/linux/${MES_ARCH} -o lib-arm64.o lib/lib-arm64.c
+        $CC -c $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG -o libtcc1.o ${MES_LIB}/libtcc1.c
+        $CC -c $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG -o lib-arm64.o lib/lib-arm64.c
         $AR cr libtcc1.a libtcc1.o lib-arm64.o
     fi
 
@@ -268,8 +268,8 @@ if true; then
         cp -f libtcc1-mes.a $prefix/lib/tcc
     fi
     if [ $mes_cpu = riscv64 ]; then
-        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG lib/lib-arm64.c
-        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG libtcc1.o $MES_LIB/libtcc1.c
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG -o lib-arm64.o lib/lib-arm64.c
+        $CC -c -g $CPPFLAGS $CFLAGS $CPP_TARGET_FLAG -D HAVE_FLOAT=1 -o libtcc1.o $MES_LIB/libtcc1.c
         $AR cr libtcc1.a libtcc1.o lib-arm64.o
     fi
 
