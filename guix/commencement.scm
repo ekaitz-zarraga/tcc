@@ -734,6 +734,7 @@ MesCC-Tools), and finally M2-Planet.")
                     (interpreter "/mes/loader"))
                (invoke
                 "tcc"
+                "-g"
                 "-vvv"
                 "-D" "BOOTSTRAP=1"
                 "-D" "ONE_SOURCE=1"
@@ -746,8 +747,7 @@ MesCC-Tools), and finally M2-Planet.")
                 "-D" (string-append "CONFIG_TCC_CRTPREFIX=\"" out "/lib:{B}/lib:.\"")
                 "-D" (string-append "CONFIG_TCC_ELFINTERP=\"" interpreter "\"")
                 "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib:{B}/lib:.\"")
-                "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\""
-                                    tcc "/include" ":/include:{B}/include\"")
+                "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":" out "/include:{B}/include\"")
                 "-D" (string-append "TCC_LIBGCC=\"" tcc "/lib/libc.a\"")
                 "-o" "tcc"
                 "tcc.c"))))
@@ -775,35 +775,27 @@ MesCC-Tools), and finally M2-Planet.")
                       "-D" (string-append "CONFIG_TCC_CRTPREFIX=\"" out "/lib:{B}/lib:.\"")
                       "-D" (string-append "CONFIG_TCC_ELFINTERP=\"" interpreter "\"")
                       "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib:{B}/lib:{B}/lib/tcc:.\"")
-                      "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\""
-                                          tcc "/include" ":/include:{B}/include\"")
+                      "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":" out "/include:{B}/include\"")
                       "-D" (string-append "TCC_LIBGCC=\"" tcc "/lib/libc.a\"")
                       "-D" (string-append "TCC_LIBTCC1_MES=\"libtcc1-mes.a\""))))
                (and
                 (mkdir-p (string-append out "/bin"))
                 (copy-file "tcc" (string-append out "/bin/tcc"))
-                (mkdir-p (string-append out "/lib/tcc"))
+                (copy-recursively (string-append "include")
+                                  (string-append out "/include"))
                 (copy-recursively (string-append tcc "/include")
                                   (string-append out "/include"))
                 (copy-recursively (string-append tcc "/lib")
                                   (string-append out "/lib"))
                 (invoke "./tcc"
+                        "-g" "-vvv"
+                        "-I" (string-append "include")
                         "-D" (string-append "TCC_TARGET_" (string-upcase ,(tcc-system)) "=1")
-                        "-c" "-o" "libtcc1.o" "lib/libtcc1.c")
+                        "-c" "-o" "libtcc1.o" (string-append mes "/lib/libtcc1.c"))
                 (invoke "./tcc" "-ar" "rc" "libtcc1.a" "libtcc1.o")
                 (copy-file "libtcc1.a" (string-append out "/lib/libtcc1.a"))
                 (delete-file (string-append out "/lib/tcc/libtcc1.a"))
-                (copy-file "libtcc1.a"
-                           (string-append out "/lib/tcc/libtcc1.a"))
-
-                (delete-file (string-append out "/lib/libc.a"))
-                (apply invoke "./tcc" "-c" "-o" "libc.o"
-                       "-I" (string-append tcc "/include")
-                       "-I" (string-append tcc "/include/linux/x86")
-                       (string-append mes "/lib/libc+gnu.c")
-                       cppflags)
-                (invoke "./tcc" "-ar" "rc" "libc.a" "libc.o")
-                (copy-file "libc.a" (string-append out "/lib/libc.a")))))))))))
+                (copy-file "libtcc1.a" (string-append out "/lib/tcc/libtcc1.a")))))))))))
 
 
 (define patch-mesboot
