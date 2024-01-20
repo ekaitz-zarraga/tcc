@@ -615,6 +615,8 @@ MesCC-Tools), and finally M2-Planet.")
          (delete 'compress-documentation))))))
 
 (define gnu-make-mesboot0
+  ;; TODO: DO THIS INSTEAD
+  ;; https://github.com/fosslinux/live-bootstrap/blob/master/steps/make-3.82/pass1.kaem
   ;; The initial make
   (package
     (inherit gnu-make)
@@ -634,13 +636,6 @@ MesCC-Tools), and finally M2-Planet.")
     (arguments
      `(#:implicit-inputs? #f
        #:guile ,%bootstrap-guile
-       #:configure-flags (list
-                           "CC=tcc"
-                           "CPP=tcc -E"
-                           "LD=tcc"
-                           ,(string-append "--build=" (or (%current-system) (%current-target-system)))
-                           ,(string-append "--host=" (or (%current-system) (%current-target-system)))
-                           "--disable-nls")
        #:modules ((guix build gnu-build-system)
                   (guix build utils)
                   (srfi srfi-1))
@@ -656,12 +651,47 @@ MesCC-Tools), and finally M2-Planet.")
            (lambda _
              (substitute* "make.h"
                (("^extern long int lseek.*" all) (string-append "// " all)))))
+         (replace 'configure
+           (lambda _
+             (call-with-output-file "config.h" (lambda (p) display "" p))
+             (call-with-output-file "putenv_stub.c"
+               (lambda (p) (display "int putenv(char *string) { return 0; }" p)))))
          (replace 'build
            (lambda _
-             (invoke "sh" "./build.sh")))
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "getopt.c")
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "getopt1.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DHAVE_FCNTL_H" "arscan.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DFILE_TIMESTAMP_HI_RES=0" "commands.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DSCCS_GET=\"/nullop\"" "default.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "expand.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DFILE_TIMESTAMP_HI_RES=0" "file.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-Dvfork=fork" "function.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "implicit.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DHAVE_DUP2" "-DHAVE_STRCHR" "-Dvfork=fork" "job.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DLOCALEDIR=\"/fake-locale\"" "-DPACKAGE=\"fake-make\"" "-DHAVE_MKTEMP" "-DHAVE_GETCWD" "main.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DHAVE_STRERROR" "-DHAVE_VPRINTF" "-DHAVE_ANSI_COMPILER" "-DHAVE_STDARG_H" "misc.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DFILE_TIMESTAMP_HI_RES=0" "-DHAVE_FCNTL_H" "-DLIBDIR=\"${PREFIX}/lib\"" "remake.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "rule.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "signame.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "strcache.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "variable.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "vpath.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "hash.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "remote-stub.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-Iglob" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DHAVE_STDINT_H" "ar.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-Iglob" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DHAVE_DIRENT_H" "dir.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-Iglob" "-DHAVE_INTTYPES_H" "-DHAVE_SA_RESTART" "-DINCLUDEDIR=\"${PREFIX}/include\"" "read.c")
+             (invoke "tcc" "-g" "-c" "-I." "-DNO_FLOAT" "-DVERSION=\"3.82\"" "version.c")
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "-DHAVE_FCNTL_H" "getloadavg.c")
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "-Iglob" "-DSTDC_HEADERS" "glob/fnmatch.c")
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "-Iglob" "-DHAVE_STRDUP" "-DHAVE_DIRENT_H" "glob/glob.c")
+             (invoke "tcc" "-g" "-c" "-DNO_FLOAT" "putenv_stub.c")
+             (invoke "tcc" "-g" "-static" "-o" "make" "getopt.o" "getopt1.o" "ar.o" "arscan.o" "commands.o" "default.o" "dir.o" "expand.o" "file.o" "function.o" "implicit.o" "job.o" "main.o" "misc.o" "read.o" "remake.o" "rule.o" "signame.o" "strcache.o" "variable.o" "version.o" "vpath.o" "hash.o" "remote-stub.o" "getloadavg.o" "fnmatch.o" "glob.o" "putenv_stub.o")
+             ))
+         ;TODO
          (replace 'check                ; proper check needs awk
            (lambda _
-             (invoke "./make" "--version")))
+             (invoke "./make" "-v")))
          (replace 'install
            (lambda _
              (let* ((out (assoc-ref %outputs "out"))
@@ -687,7 +717,6 @@ MesCC-Tools), and finally M2-Planet.")
          (end   (+ 4 start)))
   (not (false-if-exception (equal? ".git" (substring path start end))))))
 
-
 (define tcc-boot
   ;; The final tcc.
   (package
@@ -701,6 +730,7 @@ MesCC-Tools), and finally M2-Planet.")
     (inputs '())
     (propagated-inputs '())
     (native-inputs `(("mes" ,mes-boot)
+                     ;; We don't need "make" for this anymore
                      ,@(alist-delete "make" (%boot-tcc0-inputs))))
     (arguments
      `(#:implicit-inputs? #f
@@ -798,6 +828,8 @@ MesCC-Tools), and finally M2-Planet.")
                 (copy-file "libtcc1.a" (string-append out "/lib/tcc/libtcc1.a")))))))))))
 
 
+
+
 (define patch-mesboot
   ;; The initial patch.
   (package
@@ -811,7 +843,7 @@ MesCC-Tools), and finally M2-Planet.")
               (sha256
                (base32
                 "12nv7jx3gxfp50y11nxzlnmqqrpicjggw6pcsq0wyavkkm3cddgc"))))
-    (supported-systems '("i686-linux" "x86_64-linux"))
+    (supported-systems '("i686-linux" "x86_64-linux" "riscv64"))
     (inputs '())
     (propagated-inputs '())
     (native-inputs (%boot-tcc0-inputs))
@@ -819,6 +851,7 @@ MesCC-Tools), and finally M2-Planet.")
      `(#:implicit-inputs? #f
        #:guile ,%bootstrap-guile
        #:parallel-build? #f
+       #:out-of-source? #f
        #:tests? #f            ; check is naive, also checks non-built PROGRAMS
        #:strip-binaries? #f   ; no strip yet
        #:configure-flags '("AR=tcc -ar" "CC=tcc" "LD-tcc")
