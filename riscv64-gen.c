@@ -121,14 +121,14 @@ static void ER(uint32_t opcode, uint32_t func3,
 static void EI(uint32_t opcode, uint32_t func3,
                uint32_t rd, uint32_t rs1, uint32_t imm)
 {
-    assert(! ((imm + (1 << 11)) >> 12));
+    assert(! ((uint32_t)(imm + (1 << 11)) >> 12));
     EIu(opcode, func3, rd, rs1, imm);
 }
 
 static void ES(uint32_t opcode, uint32_t func3,
                uint32_t rs1, uint32_t rs2, uint32_t imm)
 {
-    assert(! ((imm + (1 << 11)) >> 12));
+    assert(! ((uint32_t)(imm + (1 << 11)) >> 12));
     o(opcode | (func3 << 12) | ((imm & 0x1f) << 7) | (rs1 << 15)
       | (rs2 << 20) | ((imm >> 5) << 25));
 }
@@ -142,7 +142,7 @@ ST_FUNC void gsym_addr(int t_, int a_)
         unsigned char *ptr = cur_text_section->data + t;
         uint32_t next = read32le(ptr);
         uint32_t r = a - t, imm;
-        if ((r + (1 << 21)) & ~((1U << 22) - 2))
+        if ((uint32_t)(r + (1 << 21)) & ~((1U << 22) - 2))
           tcc_error("out-of-range branch chain");
         imm =   (((r >> 12) &  0xff) << 12)
             | (((r >> 11) &     1) << 20)
