@@ -2517,6 +2517,7 @@ static void gen_cast(CType *type)
                   | (lvalue_type(type->ref->type.t) & VT_LVAL_TYPE);
     }
     vtop->type = *type;
+    vtop->type.t &= ~ ( VT_CONSTANT | VT_VOLATILE | VT_ARRAY );
 }
 
 /* return type size as known at compile time. Put alignment at 'a' */
