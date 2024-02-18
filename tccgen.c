@@ -2381,7 +2381,19 @@ static void gen_cast(CType *type)
                   if (sbt == (VT_LLONG|VT_UNSIGNED))
                     ;
                 else if (sbt & VT_UNSIGNED)
-                    vtop->c.i = (uint32_t)vtop->c.i;
+#if defined(TCC_TARGET_RISCV64)
+                {
+                        /* RISC-V keeps 32bit vals in registers sign-extended.
+                           So here we need a zero-extension.  */
+                        vtop->type.t = VT_LLONG;
+                        vpushi(32);
+                        gen_op(TOK_SHL);
+                        vpushi(32);
+                        gen_op(TOK_SHR);
+                }
+#else
+                    vtop->c.i = (uint32_t)vtop->c.i; // ERROR IS HERE
+#endif
 #if PTR_SIZE == 8
                 else if (sbt == VT_PTR)
                     ;
