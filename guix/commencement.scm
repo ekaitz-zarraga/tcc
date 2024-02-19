@@ -29,48 +29,49 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
-
 (define-module (guix commencement)
-  #:use-module (gnu packages)
-  #:use-module (gnu packages bootstrap)
+  #:use-module ((guix git-download) #:select (git-reference git-file-name))
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix store) #:select (%store-monad))
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
-  #:use-module (gnu packages c)
-  #:use-module (gnu packages gcc)
-  #:use-module (gnu packages m4)
-  #:use-module (gnu packages gawk)
   #:use-module (gnu packages bison)
-  #:use-module (gnu packages flex)
-  #:use-module (gnu packages guile)
-  #:use-module (gnu packages gettext)
-  #:use-module (gnu packages multiprecision)
+  #:use-module (gnu packages bootstrap)
+  #:use-module (gnu packages c)
   #:use-module (gnu packages compression)
-  #:use-module (gnu packages mes)
-  #:use-module (gnu packages perl)
-  #:use-module (gnu packages python)
-  #:use-module (gnu packages linux)
+  #:use-module (gnu packages flex)
+  #:use-module (gnu packages gawk)
+  #:use-module (gnu packages gcc)
+  #:use-module (gnu packages gettext)
+  #:use-module (gnu packages guile)
   #:use-module (gnu packages hurd)
+  #:use-module (gnu packages linux)
+  #:use-module (gnu packages m4)
+  #:use-module (gnu packages mes)
+  #:use-module (gnu packages multiprecision)
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages python)
   #:use-module (gnu packages shells)
   #:use-module (gnu packages texinfo)
-  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages xml)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix store) #:select (%store-monad))
-  #:use-module (guix monads)
-  #:use-module (guix download)
-  #:use-module (guix git-download)
+  #:use-module (gnu packages)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (guix download)
+  #:use-module (guix gexp)
+  #:use-module (guix git-download)
   #:use-module (guix memoization)
+  #:use-module (guix monads)
+  #:use-module (guix packages)
+  #:use-module (guix platform)
   #:use-module (guix utils)
-  #:use-module (srfi srfi-1)
+  #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 vlist)
-  #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:export (make-gcc-toolchain))
 
 ;;; Commentary:
@@ -377,16 +378,26 @@ MesCC-Tools), and finally M2-Planet.")
   (package
     (inherit mes)
     (name "mes-boot")
-    (version "0.24.2")
+    (version "0.25.1")
     (source (origin
                 (method git-fetch)
                 (uri (git-reference
-                       (url "https://github.com/ekaitz-zarraga/mes/")
-                       (commit "self-hosted-tcc-rv64")))
-                (file-name (git-file-name name version))
+                       (url "https://gitlab.com/janneke/mes.git/")
+                       (commit "6cfbeb51cc9ee64ea6f51842726303d28d1dcb7b")
+                       (recursive? #t)))
                 (sha256
                   (base32
-                    "1dj0cm9chbkbk344y0ldalf9ijcbv056dwf32r5rs1a7xhvzsn89"))))
+                    "0zpb43d48g55g2435nwcayhr9k825kzg6whzqhajjcynsnrhid56")))
+          #;(origin
+              (method url-fetch)
+              (uri (list (string-append "mirror://gnu/mes/"
+                                   "mes-" version ".tar.gz")
+                         (string-append "https://lilypond.org/janneke/mes/"
+                                        "mes-" version ".tar.gz")))
+              (sha256
+               (base32
+                "03np6h4qx94givjdvq2rmhvab38y5f91254n0avg4vq2j0cx78in"))))
+    (inputs '())
     (propagated-inputs '())
     (supported-systems '("i686-linux" "x86_64-linux" "riscv64-linux"))
     (native-inputs
@@ -417,10 +428,17 @@ MesCC-Tools), and finally M2-Planet.")
                                            dir "/nyacc-1.00.2/module"))
                 (invoke "gash" "configure.sh"
                         (string-append "--prefix=" out)
-                        "--host=" #$(or (%current-target-system)
-                                        (%current-system))))))
+                        (string-append "--host="
+                          #$(cond
+                              ((target-x86-64?) "i686-linux-gnu")
+                              (#t (platform-system->target
+                                    (%current-system)))))))))
           (replace 'build
             (lambda _
+              ;; TODO: GUILE_LOAD_PATH is leaking. We need to clean it.
+              (substitute* "kaem.run"
+                (("cp bin/mes-m2 bin/mes" all)
+                 (string-append "GUILE_LOAD_PATH=/fubar\n" all)))
               (invoke "gash" "bootstrap.sh")))
           (delete 'check)
           (replace 'install
