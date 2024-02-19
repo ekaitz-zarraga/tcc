@@ -2227,13 +2227,12 @@ redo:
         gv(is_float(vtop->type.t & VT_BTYPE) ? RC_FLOAT : RC_INT);
 }
 
-#ifndef TCC_TARGET_ARM
+#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64 || defined TCC_TARGET_ARM
+#define gen_cvt_itof1 gen_cvt_itof
+#else
 /* generic itof for unsigned long long case */
 static void gen_cvt_itof1(int t)
 {
-#ifdef TCC_TARGET_ARM64
-    gen_cvt_itof(t);
-#else
     if ((vtop->type.t & (VT_BTYPE | VT_UNSIGNED)) == 
         (VT_LLONG | VT_UNSIGNED)) {
 
@@ -2252,16 +2251,15 @@ static void gen_cvt_itof1(int t)
     } else {
         gen_cvt_itof(t);
     }
-#endif
 }
 #endif
 
+#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64
+#define gen_cvt_ftoi1 gen_cvt_ftoi
+#else
 /* generic ftoi for unsigned long long case */
 static void gen_cvt_ftoi1(int t)
 {
-#ifdef TCC_TARGET_ARM64
-    gen_cvt_ftoi(t);
-#else
     int st;
 
     if (t == (VT_LLONG | VT_UNSIGNED)) {
@@ -2283,8 +2281,8 @@ static void gen_cvt_ftoi1(int t)
     } else {
         gen_cvt_ftoi(t);
     }
-#endif
 }
+#endif
 
 /* force char or short cast */
 static void force_charshort_cast(int t)
