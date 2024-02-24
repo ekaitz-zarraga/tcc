@@ -377,8 +377,18 @@ MesCC-Tools), and finally M2-Planet.")
   (package
     (inherit mes)
     (name "mes-boot")
-    (version "0.25.1")
-    (source (origin
+    (version "wip")
+    (source
+      (origin
+                (method git-fetch)
+                (uri (git-reference
+                       (url "https://github.com/ekaitz-zarraga/mes/")
+                       (commit version)
+                       (recursive? #t)))
+                (sha256
+                  (base32
+                    "03xffd2g180gss1nydxj7fc3bpiavcn80291ypia7lwk0abnqhhb")))
+      #;(origin
               (method url-fetch)
               (uri (list (string-append "mirror://gnu/mes/"
                                    "mes-" version ".tar.gz")
@@ -474,8 +484,17 @@ MesCC-Tools), and finally M2-Planet.")
   (package
     (inherit tcc)
     (name "tcc-boot0")
-    (version "0.9.26-1149-g46a75d0c")
+    (version "riscv-mes")
     (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                       (url "https://github.com/ekaitz-zarraga/tcc/")
+                       (commit version)
+                       (recursive? #t)))
+                (sha256
+                  (base32
+                    "0f6l2iv1ps0sj19jzn255nipqv6lz41hkhxsmvffzikvpdcqmnwh")))
+            #;(origin
               (method url-fetch)
               (uri (list
                     (string-append "mirror://gnu/guix/mirror/"
