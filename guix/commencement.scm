@@ -741,7 +741,7 @@ MesCC-Tools), and finally M2-Planet.")
   (package
     (inherit tcc-boot0)
     (name "tcc-boot")
-    (version "0.9.27")
+    (version "mob-riscv-bootstrap")
     (source (local-file %source-dir-this
               #:recursive? #t
               #:select? discard-git))
@@ -795,8 +795,12 @@ MesCC-Tools), and finally M2-Planet.")
                 "-D" (string-append "CONFIG_TCCDIR=\"" out "/lib/tcc\"")
                 "-D" (string-append "CONFIG_TCC_CRTPREFIX=\"" out "/lib:{B}/lib:.\"")
                 "-D" (string-append "CONFIG_TCC_ELFINTERP=\"" interpreter "\"")
-                "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib:{B}/lib:.\"")
-                "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":" out "/include:{B}/include\"")
+                "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib" ":"
+                                                             out "/lib" ":"
+                                                             "{B}/lib:.\"")
+                "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":"
+                                                                    out "/include" ":"
+                                                                    "{B}/include\"")
                 "-D" (string-append "TCC_LIBGCC=\"" tcc "/lib/libc.a\"")
                 "-o" "tcc"
                 "tcc.c"))))
@@ -823,8 +827,12 @@ MesCC-Tools), and finally M2-Planet.")
                       "-D" (string-append "CONFIG_TCCDIR=\"" out "/lib/tcc\"")
                       "-D" (string-append "CONFIG_TCC_CRTPREFIX=\"" out "/lib:{B}/lib:.\"")
                       "-D" (string-append "CONFIG_TCC_ELFINTERP=\"" interpreter "\"")
-                      "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib:{B}/lib:{B}/lib/tcc:.\"")
-                      "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":" out "/include:{B}/include\"")
+                      "-D" (string-append "CONFIG_TCC_LIBPATHS=\"" tcc "/lib" ":"
+                                                                   out "/lib" ":"
+                                                                   "{B}/lib:.\"")
+                      "-D" (string-append "CONFIG_TCC_SYSINCLUDEPATHS=\"" tcc "/include" ":"
+                                                                          out "/include" ":"
+                                                                          "{B}/include\"")
                       "-D" (string-append "TCC_LIBGCC=\"" tcc "/lib/libc.a\"")
                       "-D" (string-append "TCC_LIBTCC1_MES=\"libtcc1-mes.a\""))))
                (and
@@ -841,10 +849,29 @@ MesCC-Tools), and finally M2-Planet.")
                         "-I" (string-append "include")
                         "-D" (string-append "TCC_TARGET_" (string-upcase ,(tcc-system)) "=1")
                         "-c" "-o" "libtcc1.o" (string-append mes "/lib/libtcc1.c"))
-                (invoke "./tcc" "-ar" "rc" "libtcc1.a" "libtcc1.o")
+                (cond
+                  (,(or (target-aarch64?) (target-riscv64?))
+                   (invoke "./tcc"
+                           "-g" "-vvv"
+                           "-I" (string-append "include")
+                           "-D" (string-append "TCC_TARGET_" (string-upcase ,(tcc-system)) "=1")
+                           "-c" "-o" "lib-arm64.o" "lib/lib-arm64.c")
+                   (invoke "./tcc" "-ar" "rc" "libtcc1.a" "libtcc1.o" "lib-arm64.o"))
+                  (else
+                   (invoke "./tcc" "-ar" "rc" "libtcc1.a" "libtcc1.o")))
                 (copy-file "libtcc1.a" (string-append out "/lib/libtcc1.a"))
                 (delete-file (string-append out "/lib/tcc/libtcc1.a"))
-                (copy-file "libtcc1.a" (string-append out "/lib/tcc/libtcc1.a")))))))))))
+                (copy-file "libtcc1.a"
+                           (string-append out "/lib/tcc/libtcc1.a"))
+
+                (delete-file (string-append out "/lib/libc.a"))
+                (apply invoke "./tcc" "-c" "-o" "libc.o"
+                       "-I" (string-append tcc "/include")
+                       "-I" (string-append tcc "/include/linux/" ,(mes-system))
+                       (string-append mes "/lib/libc+gnu.c")
+                       cppflags)
+                (invoke "./tcc" "-ar" "rc" "libc.a" "libc.o")
+                (copy-file "libc.a" (string-append out "/lib/libc.a")))))))))))
 
 
 
