@@ -549,6 +549,21 @@ static void asm_mem_access_opcode(TCCState *s1, int token)
     Operand ops[3];
     parse_mem_access_operands(s1, &ops[0]);
 
+    /* Pseudoinstruction: inst reg, label
+     * expand to:
+     *   auipc reg, 0
+     *   inst reg, 0(reg)
+     * And with the proper relocation to label
+     */
+    if (ops[1].type == OP_IM32 && ops[1].e.sym && ops[1].e.sym->type.t & VT_STATIC){
+        ops[1] = ops[0];
+        /* set the offset to zero */
+        ops[2].type = OP_IM12S;
+        ops[2].e.v  = 0;
+        /* auipc reg, 0 */
+        asm_emit_u(token, (0x05 << 2) | 3, &ops[0], &ops[2]);
+    }
+
     // l{b|h|w|d}[u] rd, imm(rs1); I-format
     switch (token) {
     case TOK_ASM_lb:
