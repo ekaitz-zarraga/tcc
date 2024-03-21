@@ -938,6 +938,29 @@ static void asm_parse_directive(TCCState *s1, int global)
         next();
         break;
 #endif
+#ifdef TCC_TARGET_RISCV64
+    case TOK_ASMDIR_option:
+        next();
+        switch(tok){
+            case TOK_ASM_pic:
+            case TOK_ASM_nopic:
+            case TOK_ASM_relax:
+            case TOK_ASM_norelax:
+            case TOK_ASM_push:
+            case TOK_ASM_pop:
+                /* TODO: unimplemented */
+                next();
+                break;
+            case TOK_ASM_arch:
+                /* TODO: unimplemented, requires extra parsing */
+                tcc_error("unimp .option '.%s'", get_tok_str(tok, NULL));
+                break;
+            default:
+                tcc_error("unknown .option '.%s'", get_tok_str(tok, NULL));
+                break;
+        }
+        break;
+#endif
     default:
         tcc_error("unknown assembler directive '.%s'", get_tok_str(tok, NULL));
         break;
@@ -1137,6 +1160,9 @@ static void subst_asm_operands(ASMOperand *operands, int nb_operands,
             if (*str == 'c' || *str == 'n' ||
                 *str == 'b' || *str == 'w' || *str == 'h' || *str == 'k' ||
 		*str == 'q' ||
+#ifdef TCC_TARGET_RISCV64
+		*str == 'z' ||
+#endif
 		/* P in GCC would add "@PLT" to symbol refs in PIC mode,
 		   and make literal operands not be decorated with '$'.  */
 		*str == 'P')
